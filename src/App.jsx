@@ -14,7 +14,7 @@ import "./styles.css";
 
 
 
-const ADMIN_PIN = "1234";
+const ADMIN_PIN = "XYF26";
 
 
 
@@ -23,6 +23,38 @@ const ROUND_1_TIME = 15 * 60;
 
 
 const ROUND_2_TIME = 30 * 60;
+
+const OPTION_LABELS = ["A", "B", "C", "D"];
+const OPTION_PERMUTATIONS = (() => {
+  const result = [];
+  const build = (prefix, remaining) => {
+    if (!remaining.length) { result.push(prefix); return; }
+    remaining.forEach((value, index) => build([...prefix, value], [...remaining.slice(0, index), ...remaining.slice(index + 1)]));
+  };
+  build([], [0, 1, 2, 3]);
+  return result;
+})();
+function hashSeed(value) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) { hash ^= value.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+  return hash >>> 0;
+}
+function buildTeamQuestionOptions(question, teamId, previousOrder) {
+  const base = [
+    { original: "A", text: question.option_a },
+    { original: "B", text: question.option_b },
+    { original: "C", text: question.option_c },
+    { original: "D", text: question.option_d },
+  ];
+  const candidates = previousOrder ? OPTION_PERMUTATIONS.filter((perm) => perm.every((baseIndex, position) => base[baseIndex].original !== previousOrder[position])) : OPTION_PERMUTATIONS;
+  const pool = candidates.length ? candidates : OPTION_PERMUTATIONS;
+  const chosen = pool[hashSeed(`${teamId || "team"}:${question.id}`) % pool.length];
+  return { ...question, displayOptions: chosen.map((baseIndex, position) => ({ letter: OPTION_LABELS[position], original: base[baseIndex].original, text: base[baseIndex].text })), displayOrder: chosen.map((baseIndex) => base[baseIndex].original) };
+}
+function buildTeamQuestions(data, teamId) {
+  let previousOrder = null;
+  return data.map((question) => { const built = buildTeamQuestionOptions(question, teamId, previousOrder); previousOrder = built.displayOrder; return built; });
+}
 
 
 
@@ -34,7 +66,7 @@ const ROUND_2_TIME = 30 * 60;
 
 
 
-   APP
+   APP
 
 
 
@@ -50,11 +82,11 @@ function App() {
 
 
 
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState("home");
 
 
 
-  const [team, setTeam] = useState(null);
+  const [team, setTeam] = useState(null);
 
 
 
@@ -62,19 +94,19 @@ function App() {
 
 
 
-  return (
+  return (
 
 
 
-    <div>
+    <div>
 
 
 
-      <header className="header">
+      <header className="header">
 
 
 
-        <div className="logo">WEB DESIGNING</div>
+        <div className="logo">WEB DESIGNING</div>
 
 
 
@@ -82,19 +114,19 @@ function App() {
 
 
 
-        <div className="header-right">
+        <div className="header-right">
 
 
 
-          <span>TEAM QUIZ</span>
+          <span>TEAM QUIZ</span>
 
 
 
-        </div>
+        </div>
 
 
 
-      </header>
+      </header>
 
 
 
@@ -102,7 +134,7 @@ function App() {
 
 
 
-      {page === "home" && <Home setPage={setPage} />}
+      {page === "home" && <Home setPage={setPage} />}
 
 
 
@@ -110,27 +142,27 @@ function App() {
 
 
 
-      {page === "join" && (
+      {page === "join" && (
 
 
 
-        <JoinTeam
+        <JoinTeam
 
 
 
-          setPage={setPage}
+          setPage={setPage}
 
 
 
-          setTeam={setTeam}
+          setTeam={setTeam}
 
 
 
-        />
+        />
 
 
 
-      )}
+      )}
 
 
 
@@ -138,27 +170,27 @@ function App() {
 
 
 
-      {page === "waiting" && (
+      {page === "waiting" && (
 
 
 
-        <WaitingRoom
+        <WaitingRoom
 
 
 
-          team={team}
+          team={team}
 
 
 
-          setPage={setPage}
+          setPage={setPage}
 
 
 
-        />
+        />
 
 
 
-      )}
+      )}
 
 
 
@@ -166,31 +198,31 @@ function App() {
 
 
 
-      {page === "round1" && (
+      {page === "round1" && (
 
 
 
-        <Round1Quiz
+        <Round1Quiz
 
 
 
-          team={team}
+          team={team}
 
 
 
-          setPage={setPage}
+          setPage={setPage}
 
 
 
-          setTeam={setTeam}
+          setTeam={setTeam}
 
 
 
-        />
+        />
 
 
 
-      )}
+      )}
 
 
 
@@ -198,27 +230,27 @@ function App() {
 
 
 
-      {page === "round2" && (
+      {page === "round2" && (
 
 
 
-        <Round2Page
+        <Round2Page
 
 
 
-          team={team}
+          team={team}
 
 
 
-          setPage={setPage}
+          setPage={setPage}
 
 
 
-        />
+        />
 
 
 
-      )}
+      )}
 
 
 
@@ -226,15 +258,15 @@ function App() {
 
 
 
-      {page === "admin" && <AdminPanel />}
+      {page === "admin" && <AdminPanel />}
 
 
 
-    </div>
+    </div>
 
 
 
-  );
+  );
 
 
 
@@ -250,7 +282,7 @@ function App() {
 
 
 
-   HOME
+   HOME
 
 
 
@@ -266,23 +298,23 @@ function Home({ setPage }) {
 
 
 
-  return (
+  return (
 
 
 
-    <main className="home">
+    <main className="home">
 
 
 
-      <div className="badge">
+      <div className="badge">
 
 
 
-        COLLEGE EVENT • TEAM QUIZ
+        COLLEGE EVENT • TEAM QUIZ
 
 
 
-      </div>
+      </div>
 
 
 
@@ -290,31 +322,31 @@ function Home({ setPage }) {
 
 
 
-      <h1>
+      <h1>
 
 
 
-        WEB
+        WEB
 
 
 
-        <br />
+        <br />
 
 
 
-        DESIGNING
+        DESIGNING
 
 
 
-        <br />
+        <br />
 
 
 
-        <span>QUIZ</span>
+        <span>QUIZ</span>
 
 
 
-      </h1>
+      </h1>
 
 
 
@@ -322,15 +354,15 @@ function Home({ setPage }) {
 
 
 
-      <p className="description">
+      <p className="description">
 
 
 
-        Think fast. Design smart. Compete as a team.
+        Think fast. Design smart. Compete as a team.
 
 
 
-      </p>
+      </p>
 
 
 
@@ -338,31 +370,31 @@ function Home({ setPage }) {
 
 
 
-      <div className="home-buttons">
+      <div className="home-buttons">
 
 
 
-        <button
+        <button
 
 
 
-          className="primary-btn"
+          className="primary-btn"
 
 
 
-          onClick={() => setPage("join")}
+          onClick={() => setPage("join")}
 
 
 
-        >
+        >
 
 
 
-          Join Quiz →
+          Join Quiz →
 
 
 
-        </button>
+        </button>
 
 
 
@@ -370,31 +402,31 @@ function Home({ setPage }) {
 
 
 
-        <button
+        <button
 
 
 
-          className="secondary-btn"
+          className="secondary-btn"
 
 
 
-          onClick={() => setPage("admin")}
+          onClick={() => setPage("admin")}
 
 
 
-        >
+        >
 
 
 
-          Admin
+          Admin
 
 
 
-        </button>
+        </button>
 
 
 
-      </div>
+      </div>
 
 
 
@@ -402,27 +434,27 @@ function Home({ setPage }) {
 
 
 
-      <div className="round-info">
+      <div className="round-info">
 
 
 
-        <div>
+        <div>
 
 
 
-          <strong>ROUND 01</strong>
+          <strong>ROUND 01</strong>
 
 
 
-          <span>30 Questions</span>
+          <span>30 Questions</span>
 
 
 
-          <small>15 Minutes</small>
+          <small>15 Minutes</small>
 
 
 
-        </div>
+        </div>
 
 
 
@@ -430,23 +462,23 @@ function Home({ setPage }) {
 
 
 
-        <div>
+        <div>
 
 
 
-          <strong>ROUND 02</strong>
+          <strong>ROUND 02</strong>
 
 
 
-          <span>UI Challenge</span>
+          <span>UI Challenge</span>
 
 
 
-          <small>30 Minutes</small>
+          <small>30 Minutes</small>
 
 
 
-        </div>
+        </div>
 
 
 
@@ -454,35 +486,35 @@ function Home({ setPage }) {
 
 
 
-        <div>
+        <div>
 
 
 
-          <strong>SCORING</strong>
+          <strong>SCORING</strong>
 
 
 
-          <span>No Negative</span>
+          <span>No Negative</span>
 
 
 
-          <small>1 Mark / Correct</small>
+          <small>1 Mark / Correct</small>
 
 
 
-        </div>
+        </div>
 
 
 
-      </div>
+      </div>
 
 
 
-    </main>
+    </main>
 
 
 
-  );
+  );
 
 
 
@@ -498,7 +530,7 @@ function Home({ setPage }) {
 
 
 
-   JOIN TEAM
+   JOIN TEAM
 
 
 
@@ -514,17 +546,17 @@ function JoinTeam({ setPage, setTeam }) {
 
 
 
-  const [teamName, setTeamName] = useState("");
+  const [teamName, setTeamName] = useState("");
 
 
 
-  const [members, setMembers] = useState("");
+  const [members, setMembers] = useState("");
 
   const [collegeName, setCollegeName] = useState("");
 
 
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
 
 
@@ -532,23 +564,23 @@ function JoinTeam({ setPage, setTeam }) {
 
 
 
-  const joinTeam = async () => {
+  const joinTeam = async () => {
 
 
 
-    if (!teamName.trim()) {
+    if (!teamName.trim()) {
 
 
 
-      alert("Team name enter pannunga");
+      alert("Team name enter pannunga");
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -556,7 +588,7 @@ function JoinTeam({ setPage, setTeam }) {
 
 
 
-    
+    
 
   if (!members.trim()) {
 
@@ -582,37 +614,37 @@ setLoading(true);
 
 
 
-    const { data, error } = await supabase
+    const { data, error } = await supabase
 
 
 
-      .from("teams")
+      .from("teams")
 
 
 
-      .insert({
+      .insert({
 
 
 
-        name: teamName.trim(),
+        name: teamName.trim(),
 
 
 
-        members: members.trim(),
+        members: members.trim(),
 
         college_name: collegeName.trim(),
 
 
 
-      })
+      })
 
 
 
-      .select()
+      .select()
 
 
 
-      .single();
+      .single();
 
 
 
@@ -620,7 +652,7 @@ setLoading(true);
 
 
 
-    setLoading(false);
+    setLoading(false);
 
 
 
@@ -628,11 +660,11 @@ setLoading(true);
 
 
 
-    if (error) {
+    if (error) {
 
 
 
-      console.error(error);
+      console.error(error);
 
 
 
@@ -640,23 +672,23 @@ setLoading(true);
 
 
 
-      if (error.code === "23505") {
+      if (error.code === "23505") {
 
 
 
-        alert("இந்த team name already registered!");
+        alert("இந்த team name already registered!");
 
 
 
-      } else {
+      } else {
 
 
 
-        alert(error.message);
+        alert(error.message);
 
 
 
-      }
+      }
 
 
 
@@ -664,11 +696,11 @@ setLoading(true);
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -676,15 +708,15 @@ setLoading(true);
 
 
 
-    setTeam(data);
+    setTeam(data);
 
 
 
-    setPage("waiting");
+    setPage("waiting");
 
 
 
-  };
+  };
 
 
 
@@ -692,27 +724,27 @@ setLoading(true);
 
 
 
-  return (
+  return (
 
 
 
-    <main className="join-page">
+    <main className="join-page">
 
 
 
-      <div className="join-card">
+      <div className="join-card">
 
 
 
-        <div className="badge">
+        <div className="badge">
 
 
 
-          TEAM REGISTRATION
+          TEAM REGISTRATION
 
 
 
-        </div>
+        </div>
 
 
 
@@ -720,7 +752,7 @@ setLoading(true);
 
 
 
-        <h2>Join the Quiz</h2>
+        <h2>Join the Quiz</h2>
 
 
 
@@ -728,15 +760,15 @@ setLoading(true);
 
 
 
-        <p>
+        <p>
 
 
 
-          Register your team before the admin starts Round 1.
+          Register your team before the admin starts Round 1.
 
 
 
-        </p>
+        </p>
 
 
 
@@ -744,7 +776,7 @@ setLoading(true);
 
 
 
-        <label>Team Name</label>
+        <label>Team Name</label>
 
 
 
@@ -752,35 +784,35 @@ setLoading(true);
 
 
 
-        <input
+        <input
 
 
 
-          type="text"
+          type="text"
 
 
 
-          placeholder="Example: Code Warriors"
+          placeholder="Example: Code Warriors"
 
 
 
-          value={teamName}
+          value={teamName}
 
 
 
-          onChange={(e) =>
+          onChange={(e) =>
 
 
 
-            setTeamName(e.target.value)
+            setTeamName(e.target.value)
 
 
 
-          }
+          }
 
 
 
-        />
+        />
 
 
 
@@ -788,7 +820,7 @@ setLoading(true);
 
 
 
-        <label>Team Members</label>
+        <label>Team Members</label>
 
 
 
@@ -796,35 +828,35 @@ setLoading(true);
 
 
 
-        <input
+        <input
 
 
 
-          type="text"
+          type="text"
 
 
 
-          placeholder="Kavi, Arun, Bala"
+          placeholder="Kavi, Arun, Bala"
 
 
 
-          value={members}
+          value={members}
 
 
 
-          onChange={(e) =>
+          onChange={(e) =>
 
 
 
-            setMembers(e.target.value)
+            setMembers(e.target.value)
 
 
 
-          }
+          }
 
 
 
-        />
+        />
 
 
 
@@ -832,7 +864,7 @@ setLoading(true);
 
 
 
-                <label>College Name</label>
+                <label>College Name</label>
 
 
 
@@ -872,35 +904,35 @@ setLoading(true);
 
 
 
-          className="primary-btn full"
+          className="primary-btn full"
 
 
 
-          onClick={joinTeam}
+          onClick={joinTeam}
 
 
 
-          disabled={loading}
+          disabled={loading}
 
 
 
-        >
+        >
 
 
 
-          {loading
+          {loading
 
 
 
-            ? "Registering..."
+            ? "Registering..."
 
 
 
-            : "Register Team →"}
+            : "Register Team →"}
 
 
 
-        </button>
+        </button>
 
 
 
@@ -908,39 +940,39 @@ setLoading(true);
 
 
 
-        <button
+        <button
 
 
 
-          className="secondary-btn full"
+          className="secondary-btn full"
 
 
 
-          onClick={() => setPage("home")}
+          onClick={() => setPage("home")}
 
 
 
-        >
+        >
 
 
 
-          ← Back
+          ← Back
 
 
 
-        </button>
+        </button>
 
 
 
-      </div>
+      </div>
 
 
 
-    </main>
+    </main>
 
 
 
-  );
+  );
 
 
 
@@ -956,7 +988,7 @@ setLoading(true);
 
 
 
-   WAITING ROOM
+   WAITING ROOM
 
 
 
@@ -972,15 +1004,15 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-  const [eventStatus, setEventStatus] = useState("WAITING");
+  const [eventStatus, setEventStatus] = useState("WAITING");
 
 
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
 
 
-  const [qualified, setQualified] = useState(null);
+  const [qualified, setQualified] = useState(null);
 
 
 
@@ -988,43 +1020,43 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-  const checkQualification = useCallback(async () => {
+  const checkQualification = useCallback(async () => {
 
 
 
-    if (!team?.id) return;
+    if (!team?.id) return;
 
 
 
-    const { data } = await supabase
+    const { data } = await supabase
 
 
 
-      .from("round_qualifications")
+      .from("round_qualifications")
 
 
 
-      .select("qualified")
+      .select("qualified")
 
 
 
-      .eq("team_id", team.id)
+      .eq("team_id", team.id)
 
 
 
-      .eq("round", 2)
+      .eq("round", 2)
 
 
 
-      .maybeSingle();
+      .maybeSingle();
 
 
 
-    setQualified(data ? !!data.qualified : null);
+    setQualified(data ? !!data.qualified : null);
 
 
 
-  }, [team?.id]);
+  }, [team?.id]);
 
 
 
@@ -1032,107 +1064,107 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    let channel;
+    let channel;
 
 
 
-    const getEventStatus = async () => {
+    const getEventStatus = async () => {
 
 
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase
 
 
 
-        .from("event_state")
+        .from("event_state")
 
 
 
-        .select("status, round")
+        .select("status, round")
 
 
 
-        .eq("id", 1)
+        .eq("id", 1)
 
 
 
-        .single();
+        .single();
 
 
 
-      if (!error && data) setEventStatus(data.status);
+      if (!error && data) setEventStatus(data.status);
 
 
 
-      await checkQualification();
+      await checkQualification();
 
 
 
-      setLoading(false);
+      setLoading(false);
 
 
 
-    };
+    };
 
 
 
-    getEventStatus();
+    getEventStatus();
 
 
 
-    channel = supabase
+    channel = supabase
 
 
 
-      .channel("event-status-live")
+      .channel("event-status-live")
 
 
 
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "event_state", filter: "id=eq.1" }, async (payload) => {
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "event_state", filter: "id=eq.1" }, async (payload) => {
 
 
 
-        setEventStatus(payload.new.status);
+        setEventStatus(payload.new.status);
 
 
 
-        await checkQualification();
+        await checkQualification();
 
 
 
-      })
+      })
 
 
 
-      .subscribe();
+      .subscribe();
 
 
 
-    const interval = setInterval(checkQualification, 3000);
+    const interval = setInterval(checkQualification, 3000);
 
 
 
-    return () => {
+    return () => {
 
 
 
-      clearInterval(interval);
+      clearInterval(interval);
 
 
 
-      if (channel) supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
 
 
 
-    };
+    };
 
 
 
-  }, [checkQualification]);
+  }, [checkQualification]);
 
 
 
@@ -1140,59 +1172,59 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-  const enterRound2 = async () => {
+  const enterRound2 = async () => {
 
 
 
-    const { data } = await supabase
+    const { data } = await supabase
 
 
 
-      .from("round_qualifications")
+      .from("round_qualifications")
 
 
 
-      .select("qualified")
+      .select("qualified")
 
 
 
-      .eq("team_id", team.id)
+      .eq("team_id", team.id)
 
 
 
-      .eq("round", 2)
+      .eq("round", 2)
 
 
 
-      .maybeSingle();
+      .maybeSingle();
 
 
 
-    if (!data?.qualified) {
+    if (!data?.qualified) {
 
 
 
-      alert("Your team is not qualified for Round 2.");
+      alert("Your team is not qualified for Round 2.");
 
 
 
-      setQualified(false);
+      setQualified(false);
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
-    setPage("round2");
+    setPage("round2");
 
 
 
-  };
+  };
 
 
 
@@ -1200,47 +1232,47 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-  return (
+  return (
 
 
 
-    <main className="join-page">
+    <main className="join-page">
 
 
 
-      <div className="join-card waiting-card">
+      <div className="join-card waiting-card">
 
 
 
-        <div className="badge">TEAM READY</div>
+        <div className="badge">TEAM READY</div>
 
 
 
-        <div className="waiting-icon">●</div>
+        <div className="waiting-icon">●</div>
 
 
 
-        <h2>{team?.name}</h2>
+        <h2>{team?.name}</h2>
 
 
 
-        <p>Team successfully registered.<br />Wait for the admin to start the round.</p>
+        <p>Team successfully registered.<br />Wait for the admin to start the round.</p>
 
 
 
-        <div className="status-box">
+        <div className="status-box">
 
 
 
-          <span>EVENT STATUS</span>
+          <span>EVENT STATUS</span>
 
 
 
-          <strong>{loading ? "CHECKING..." : eventStatus}</strong>
+          <strong>{loading ? "CHECKING..." : eventStatus}</strong>
 
 
 
-        </div>
+        </div>
 
 
 
@@ -1248,15 +1280,15 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-        {eventStatus === "ROUND_1" && (
+        {eventStatus === "ROUND_1" && (
 
 
 
-          <button className="primary-btn full" onClick={() => setPage("round1")}>🚀 Enter Round 1</button>
+          <button className="primary-btn full" onClick={() => setPage("round1")}>🚀 Enter Round 1</button>
 
 
 
-        )}
+        )}
 
 
 
@@ -1264,15 +1296,15 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-        {eventStatus === "ROUND_2" && qualified === true && (
+        {eventStatus === "ROUND_2" && qualified === true && (
 
 
 
-          <button className="primary-btn full" onClick={enterRound2}>🎨 Enter Round 2</button>
+          <button className="primary-btn full" onClick={enterRound2}>🎨 Enter Round 2</button>
 
 
 
-        )}
+        )}
 
 
 
@@ -1280,15 +1312,15 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-        {eventStatus === "ROUND_2" && qualified === false && (
+        {eventStatus === "ROUND_2" && qualified === false && (
 
 
 
-          <div className="waiting-message"><span>Round 2 is active, but your team was not qualified.</span></div>
+          <div className="waiting-message"><span>Round 2 is active, but your team was not qualified.</span></div>
 
 
 
-        )}
+        )}
 
 
 
@@ -1296,15 +1328,15 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-        {eventStatus === "ROUND_2" && qualified === null && (
+        {eventStatus === "ROUND_2" && qualified === null && (
 
 
 
-          <div className="waiting-message"><div className="pulse-dot"></div><span>Checking qualification...</span></div>
+          <div className="waiting-message"><div className="pulse-dot"></div><span>Checking qualification...</span></div>
 
 
 
-        )}
+        )}
 
 
 
@@ -1312,27 +1344,27 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-        {eventStatus === "WAITING" && (
+        {eventStatus === "WAITING" && (
 
 
 
-          <div className="waiting-message"><div className="pulse-dot"></div><span>Waiting for Admin...</span></div>
+          <div className="waiting-message"><div className="pulse-dot"></div><span>Waiting for Admin...</span></div>
 
 
 
-        )}
+        )}
 
 
 
-      </div>
+      </div>
 
 
 
-    </main>
+    </main>
 
 
 
-  );
+  );
 
 
 
@@ -1348,7 +1380,7 @@ function WaitingRoom({ team, setPage }) {
 
 
 
-   ROUND 1 QUIZ
+   ROUND 1 QUIZ
 
 
 
@@ -1364,11 +1396,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [questions, setQuestions] =
+  const [questions, setQuestions] =
 
 
 
-    useState([]);
+    useState([]);
 
 
 
@@ -1376,11 +1408,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [answers, setAnswers] =
+  const [answers, setAnswers] =
 
 
 
-    useState({});
+    useState({});
 
 
 
@@ -1388,11 +1420,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [answeredQuestions, setAnsweredQuestions] =
+  const [answeredQuestions, setAnsweredQuestions] =
 
 
 
-    useState({});
+    useState({});
 
 
 
@@ -1400,11 +1432,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [currentQuestion, setCurrentQuestion] =
+  const [currentQuestion, setCurrentQuestion] =
 
 
 
-    useState(0);
+    useState(0);
 
 
 
@@ -1412,11 +1444,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [timeLeft, setTimeLeft] =
+  const [timeLeft, setTimeLeft] =
 
 
 
-    useState(ROUND_1_TIME);
+    useState(ROUND_1_TIME);
 
 
 
@@ -1424,11 +1456,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [loading, setLoading] =
+  const [loading, setLoading] =
 
 
 
-    useState(true);
+    useState(true);
 
 
 
@@ -1436,11 +1468,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [submitted, setSubmitted] =
+  const [submitted, setSubmitted] =
 
 
 
-    useState(false);
+    useState(false);
 
 
 
@@ -1448,11 +1480,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [score, setScore] =
+  const [score, setScore] =
 
 
 
-    useState(0);
+    useState(0);
 
 
 
@@ -1460,11 +1492,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [rank, setRank] =
+  const [rank, setRank] =
 
 
 
-    useState(null);
+    useState(null);
 
 
 
@@ -1472,11 +1504,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const [securityTerminated, setSecurityTerminated] = useState(false);
+  const [securityTerminated, setSecurityTerminated] = useState(false);
 
 
 
-  const securityTriggeredRef = useRef(false);
+  const securityTriggeredRef = useRef(false);
 
 
 
@@ -1484,75 +1516,75 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    if (loading || submitted) return;
+    if (loading || submitted) return;
 
 
 
-    const terminateQuiz = () => {
+    const terminateQuiz = () => {
 
 
 
-      if (securityTriggeredRef.current) return;
+      if (securityTriggeredRef.current) return;
 
 
 
-      securityTriggeredRef.current = true;
+      securityTriggeredRef.current = true;
 
 
 
-      setSecurityTerminated(true);
+      setSecurityTerminated(true);
 
 
 
-    };
+    };
 
 
 
-    const onVisibility = () => {
+    const onVisibility = () => {
 
 
 
-      if (document.visibilityState === "hidden") terminateQuiz();
+      if (document.visibilityState === "hidden") terminateQuiz();
 
 
 
-    };
+    };
 
 
 
-    const onBlur = () => terminateQuiz();
+    const onBlur = () => terminateQuiz();
 
 
 
-    document.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("visibilitychange", onVisibility);
 
 
 
-    window.addEventListener("blur", onBlur);
+    window.addEventListener("blur", onBlur);
 
 
 
-    return () => {
+    return () => {
 
 
 
-      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("visibilitychange", onVisibility);
 
 
 
-      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("blur", onBlur);
 
 
 
-    };
+    };
 
 
 
-  }, [loading, submitted]);
+  }, [loading, submitted]);
 
 
 
@@ -1560,23 +1592,23 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    if (!securityTerminated) return;
+    if (!securityTerminated) return;
 
 
 
-    setTeam(null);
+    setTeam(null);
 
 
 
-    setPage("home");
+    setPage("home");
 
 
 
-  }, [securityTerminated, setPage, setTeam]);
+  }, [securityTerminated, setPage, setTeam]);
 
 
 
@@ -1584,15 +1616,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     LOAD QUESTIONS
+     LOAD QUESTIONS
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -1600,11 +1632,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    let active = true;
+    let active = true;
 
 
 
@@ -1612,43 +1644,43 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    const loadQuestions = async () => {
+    const loadQuestions = async () => {
 
 
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase
 
 
 
-        .from("questions")
+        .from("questions")
 
 
 
-        .select(
+        .select(
 
 
 
-          "id, question_order, question_text, option_a, option_b, option_c, option_d, correct_option"
+          "id, question_order, question_text, option_a, option_b, option_c, option_d, correct_option"
 
 
 
-        )
+        )
 
 
 
-        .eq("round", 1)
+        .eq("round", 1)
 
 
 
-        .order("question_order", {
+        .order("question_order", {
 
 
 
-          ascending: true,
+          ascending: true,
 
 
 
-        });
+        });
 
 
 
@@ -1656,7 +1688,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      if (!active) return;
+      if (!active) return;
 
 
 
@@ -1664,11 +1696,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      if (error) {
+      if (error) {
 
 
 
-        console.error(error);
+        console.error(error);
 
 
 
@@ -1676,19 +1708,19 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        alert(
+        alert(
 
 
 
-          "Questions load panna mudiyala: " +
+          "Questions load panna mudiyala: " +
 
 
 
-            error.message
+            error.message
 
 
 
-        );
+        );
 
 
 
@@ -1696,15 +1728,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        setLoading(false);
+        setLoading(false);
 
 
 
-        return;
+        return;
 
 
 
-      }
+      }
 
 
 
@@ -1712,15 +1744,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      setQuestions(data || []);
+      setQuestions(buildTeamQuestions(data || [], team?.id));
 
 
 
-      setLoading(false);
+      setLoading(false);
 
 
 
-    };
+    };
 
 
 
@@ -1728,7 +1760,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    loadQuestions();
+    loadQuestions();
 
 
 
@@ -1736,19 +1768,19 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    return () => {
+    return () => {
 
 
 
-      active = false;
+      active = false;
 
 
 
-    };
+    };
 
 
 
-  }, []);
+  }, []);
 
 
 
@@ -1756,15 +1788,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     CALCULATE PARTICIPANT RANK
+     CALCULATE PARTICIPANT RANK
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -1772,15 +1804,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const updateRank = useCallback(
+  const updateRank = useCallback(
 
 
 
-    async (currentScore) => {
+    async (currentScore) => {
 
 
 
-      if (!team?.id) return;
+      if (!team?.id) return;
 
 
 
@@ -1788,27 +1820,27 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase
 
 
 
-        .from("round_scores")
+        .from("round_scores")
 
 
 
-        .select(
+        .select(
 
 
 
-          "team_id, score, updated_at"
+          "team_id, score, updated_at"
 
 
 
-        )
+        )
 
 
 
-        .eq("round", 1);
+        .eq("round", 1);
 
 
 
@@ -1816,31 +1848,31 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      if (error) {
+      if (error) {
 
 
 
-        console.error(
+        console.error(
 
 
 
-          "Rank update error:",
+          "Rank update error:",
 
 
 
-          error
+          error
 
 
 
-        );
+        );
 
 
 
-        return;
+        return;
 
 
 
-      }
+      }
 
 
 
@@ -1848,7 +1880,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      const rows = data || [];
+      const rows = data || [];
 
 
 
@@ -1856,23 +1888,23 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      /*
+      /*
 
 
 
-        Rank:
+        Rank:
 
 
 
-        1. Higher score first
+        1. Higher score first
 
 
 
-        2. If same score, team_id stable tie-break
+        2. If same score, team_id stable tie-break
 
 
 
-      */
+      */
 
 
 
@@ -1880,23 +1912,23 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      const sorted = [...rows].sort(
+      const sorted = [...rows].sort(
 
 
 
-        (a, b) => {
+        (a, b) => {
 
 
 
-          if (b.score !== a.score) {
+          if (b.score !== a.score) {
 
 
 
-            return b.score - a.score;
+            return b.score - a.score;
 
 
 
-          }
+          }
 
 
 
@@ -1904,23 +1936,23 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-          return String(a.team_id).localeCompare(
+          return String(a.team_id).localeCompare(
 
 
 
-            String(b.team_id)
+            String(b.team_id)
 
 
 
-          );
+          );
 
 
 
-        }
+        }
 
 
 
-      );
+      );
 
 
 
@@ -1928,23 +1960,23 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      const position =
+      const position =
 
 
 
-        sorted.findIndex(
+        sorted.findIndex(
 
 
 
-          (item) =>
+          (item) =>
 
 
 
-            item.team_id === team.id
+            item.team_id === team.id
 
 
 
-        ) + 1;
+        ) + 1;
 
 
 
@@ -1952,31 +1984,31 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      if (position > 0) {
+      if (position > 0) {
 
 
 
-        setRank(position);
+        setRank(position);
 
 
 
-      } else {
+      } else {
 
 
 
-        /*
+        /*
 
 
 
-          Team may not yet appear immediately
+          Team may not yet appear immediately
 
 
 
-          in the query after first score save.
+          in the query after first score save.
 
 
 
-        */
+        */
 
 
 
@@ -1984,23 +2016,23 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        const betterTeams =
+        const betterTeams =
 
 
 
-          rows.filter(
+          rows.filter(
 
 
 
-            (item) =>
+            (item) =>
 
 
 
-              item.score > currentScore
+              item.score > currentScore
 
 
 
-          ).length;
+          ).length;
 
 
 
@@ -2008,23 +2040,23 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        setRank(betterTeams + 1);
+        setRank(betterTeams + 1);
 
 
 
-      }
+      }
 
 
 
-    },
+    },
 
 
 
-    [team?.id]
+    [team?.id]
 
 
 
-  );
+  );
 
 
 
@@ -2032,15 +2064,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     LOAD INITIAL SCORE + LIVE SCORE
+     LOAD INITIAL SCORE + LIVE SCORE
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -2048,11 +2080,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    if (!team?.id) return;
+    if (!team?.id) return;
 
 
 
@@ -2060,7 +2092,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    let active = true;
+    let active = true;
 
 
 
@@ -2068,39 +2100,39 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    const loadScore = async () => {
+    const loadScore = async () => {
 
 
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase
 
 
 
-        .from("round_scores")
+        .from("round_scores")
 
 
 
-        .select(
+        .select(
 
 
 
-          "score, updated_at"
+          "score, updated_at"
 
 
 
-        )
+        )
 
 
 
-        .eq("team_id", team.id)
+        .eq("team_id", team.id)
 
 
 
-        .eq("round", 1)
+        .eq("round", 1)
 
 
 
-        .maybeSingle();
+        .maybeSingle();
 
 
 
@@ -2108,7 +2140,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      if (!active) return;
+      if (!active) return;
 
 
 
@@ -2116,31 +2148,31 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      if (error) {
+      if (error) {
 
 
 
-        console.error(
+        console.error(
 
 
 
-          "Score load error:",
+          "Score load error:",
 
 
 
-          error
+          error
 
 
 
-        );
+        );
 
 
 
-        return;
+        return;
 
 
 
-      }
+      }
 
 
 
@@ -2148,11 +2180,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      const currentScore =
+      const currentScore =
 
 
 
-        data?.score || 0;
+        data?.score || 0;
 
 
 
@@ -2160,7 +2192,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      setScore(currentScore);
+      setScore(currentScore);
 
 
 
@@ -2168,11 +2200,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      await updateRank(currentScore);
+      await updateRank(currentScore);
 
 
 
-    };
+    };
 
 
 
@@ -2180,7 +2212,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    loadScore();
+    loadScore();
 
 
 
@@ -2188,59 +2220,59 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    const channel = supabase
+    const channel = supabase
 
 
 
-      .channel(
+      .channel(
 
 
 
-        `participant-score-${team.id}`
+        `participant-score-${team.id}`
 
 
 
-      )
+      )
 
 
 
-      .on(
+      .on(
 
 
 
-        "postgres_changes",
+        "postgres_changes",
 
 
 
-        {
+        {
 
 
 
-          event: "*",
+          event: "*",
 
 
 
-          schema: "public",
+          schema: "public",
 
 
 
-          table: "round_scores",
+          table: "round_scores",
 
 
 
-          filter: `team_id=eq.${team.id}`,
+          filter: `team_id=eq.${team.id}`,
 
 
 
-        },
+        },
 
 
 
-        async (payload) => {
+        async (payload) => {
 
 
 
-          if (!active) return;
+          if (!active) return;
 
 
 
@@ -2248,11 +2280,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-          const newScore =
+          const newScore =
 
 
 
-            payload.new?.score ?? 0;
+            payload.new?.score ?? 0;
 
 
 
@@ -2260,7 +2292,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-          setScore(newScore);
+          setScore(newScore);
 
 
 
@@ -2268,19 +2300,19 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-          await updateRank(newScore);
+          await updateRank(newScore);
 
 
 
-        }
+        }
 
 
 
-      )
+      )
 
 
 
-      .subscribe();
+      .subscribe();
 
 
 
@@ -2288,23 +2320,23 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    /*
+    /*
 
 
 
-      Small fallback sync.
+      Small fallback sync.
 
 
 
-      This guarantees live update even if
+      This guarantees live update even if
 
 
 
-      realtime delivery is delayed.
+      realtime delivery is delayed.
 
 
 
-    */
+    */
 
 
 
@@ -2312,15 +2344,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    const interval = setInterval(
+    const interval = setInterval(
 
 
 
-      async () => {
+      async () => {
 
 
 
-        if (!active) return;
+        if (!active) return;
 
 
 
@@ -2328,27 +2360,27 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        const { data } = await supabase
+        const { data } = await supabase
 
 
 
-          .from("round_scores")
+          .from("round_scores")
 
 
 
-          .select("score")
+          .select("score")
 
 
 
-          .eq("team_id", team.id)
+          .eq("team_id", team.id)
 
 
 
-          .eq("round", 1)
+          .eq("round", 1)
 
 
 
-          .maybeSingle();
+          .maybeSingle();
 
 
 
@@ -2356,7 +2388,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        if (!active) return;
+        if (!active) return;
 
 
 
@@ -2364,11 +2396,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        const newScore =
+        const newScore =
 
 
 
-          data?.score || 0;
+          data?.score || 0;
 
 
 
@@ -2376,7 +2408,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        setScore(newScore);
+        setScore(newScore);
 
 
 
@@ -2384,19 +2416,19 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        await updateRank(newScore);
+        await updateRank(newScore);
 
 
 
-      },
+      },
 
 
 
-      1000
+      1000
 
 
 
-    );
+    );
 
 
 
@@ -2404,11 +2436,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    return () => {
+    return () => {
 
 
 
-      active = false;
+      active = false;
 
 
 
@@ -2416,7 +2448,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      clearInterval(interval);
+      clearInterval(interval);
 
 
 
@@ -2424,15 +2456,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
 
 
 
-    };
+    };
 
 
 
-  }, [team?.id, updateRank]);
+  }, [team?.id, updateRank]);
 
 
 
@@ -2440,15 +2472,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     TIMER
+     TIMER
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -2456,15 +2488,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const submitQuiz = useCallback(
+  const submitQuiz = useCallback(
 
 
 
-    async (finalScore = score) => {
+    async (finalScore = score) => {
 
 
 
-      if (submitted) return;
+      if (submitted) return;
 
 
 
@@ -2472,7 +2504,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      setSubmitted(true);
+      setSubmitted(true);
 
 
 
@@ -2480,7 +2512,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      if (!team?.id) return;
+      if (!team?.id) return;
 
 
 
@@ -2488,63 +2520,63 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      const { error } = await supabase
+      const { error } = await supabase
 
 
 
-        .from("round_scores")
+        .from("round_scores")
 
 
 
-        .upsert(
+        .upsert(
 
 
 
-          {
+          {
 
 
 
-            team_id: team.id,
+            team_id: team.id,
 
 
 
-            round: 1,
+            round: 1,
 
 
 
-            score: finalScore,
+            score: finalScore,
 
 
 
-            updated_at:
+            updated_at:
 
 
 
-              new Date().toISOString(),
+              new Date().toISOString(),
 
 
 
-          },
+          },
 
 
 
-          {
+          {
 
 
 
-            onConflict:
+            onConflict:
 
 
 
-              "team_id,round",
+              "team_id,round",
 
 
 
-          }
+          }
 
 
 
-        );
+        );
 
 
 
@@ -2552,27 +2584,27 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      if (error) {
+      if (error) {
 
 
 
-        console.error(
+        console.error(
 
 
 
-          "Final score save error:",
+          "Final score save error:",
 
 
 
-          error
+          error
 
 
 
-        );
+        );
 
 
 
-      }
+      }
 
 
 
@@ -2580,39 +2612,39 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-      await updateRank(finalScore);
+      await updateRank(finalScore);
 
 
 
-    },
+    },
 
 
 
-    [
+    [
 
 
 
-      score,
+      score,
 
 
 
-      submitted,
+      submitted,
 
 
 
-      team?.id,
+      team?.id,
 
 
 
-      updateRank,
+      updateRank,
 
 
 
-    ]
+    ]
 
 
 
-  );
+  );
 
 
 
@@ -2620,31 +2652,31 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    if (
+    if (
 
 
 
-      loading ||
+      loading ||
 
 
 
-      submitted
+      submitted
 
 
 
-    ) {
+    ) {
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -2652,19 +2684,19 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    if (timeLeft <= 0) {
+    if (timeLeft <= 0) {
 
 
 
-      submitQuiz(score);
+      submitQuiz(score);
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -2672,35 +2704,35 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    const timer = setInterval(() => {
+    const timer = setInterval(() => {
 
 
 
-      setTimeLeft(
+      setTimeLeft(
 
 
 
-        (previous) =>
+        (previous) =>
 
 
 
-          previous > 0
+          previous > 0
 
 
 
-            ? previous - 1
+            ? previous - 1
 
 
 
-            : 0
+            : 0
 
 
 
-      );
+      );
 
 
 
-    }, 1000);
+    }, 1000);
 
 
 
@@ -2708,39 +2740,39 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    return () =>
+    return () =>
 
 
 
-      clearInterval(timer);
+      clearInterval(timer);
 
 
 
-  }, [
+  }, [
 
 
 
-    timeLeft,
+    timeLeft,
 
 
 
-    loading,
+    loading,
 
 
 
-    submitted,
+    submitted,
 
 
 
-    submitQuiz,
+    submitQuiz,
 
 
 
-    score,
+    score,
 
 
 
-  ]);
+  ]);
 
 
 
@@ -2748,15 +2780,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     FORMAT TIMER
+     FORMAT TIMER
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -2764,15 +2796,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const formatTime = (seconds) => {
+  const formatTime = (seconds) => {
 
 
 
-    const minutes =
+    const minutes =
 
 
 
-      Math.floor(seconds / 60);
+      Math.floor(seconds / 60);
 
 
 
@@ -2780,11 +2812,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    const secs =
+    const secs =
 
 
 
-      seconds % 60;
+      seconds % 60;
 
 
 
@@ -2792,35 +2824,35 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    return `${String(minutes).padStart(
+    return `${String(minutes).padStart(
 
 
 
-      2,
+      2,
 
 
 
-      "0"
+      "0"
 
 
 
-    )}:${String(secs).padStart(
+    )}:${String(secs).padStart(
 
 
 
-      2,
+      2,
 
 
 
-      "0"
+      "0"
 
 
 
-    )}`;
+    )}`;
 
 
 
-  };
+  };
 
 
 
@@ -2828,15 +2860,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     SAVE LIVE SCORE
+     SAVE LIVE SCORE
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -2844,11 +2876,11 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const saveScore = async (newScore) => {
+  const saveScore = async (newScore) => {
 
 
 
-    if (!team?.id) return;
+    if (!team?.id) return;
 
 
 
@@ -2856,63 +2888,63 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    const { error } = await supabase
+    const { error } = await supabase
 
 
 
-      .from("round_scores")
+      .from("round_scores")
 
 
 
-      .upsert(
+      .upsert(
 
 
 
-        {
+        {
 
 
 
-          team_id: team.id,
+          team_id: team.id,
 
 
 
-          round: 1,
+          round: 1,
 
 
 
-          score: newScore,
+          score: newScore,
 
 
 
-          updated_at:
+          updated_at:
 
 
 
-            new Date().toISOString(),
+            new Date().toISOString(),
 
 
 
-        },
+        },
 
 
 
-        {
+        {
 
 
 
-          onConflict:
+          onConflict:
 
 
 
-            "team_id,round",
+            "team_id,round",
 
 
 
-        }
+        }
 
 
 
-      );
+      );
 
 
 
@@ -2920,31 +2952,31 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    if (error) {
+    if (error) {
 
 
 
-      console.error(
+      console.error(
 
 
 
-        "Live score save error:",
+        "Live score save error:",
 
 
 
-        error
+        error
 
 
 
-      );
+      );
 
 
 
-    }
+    }
 
 
 
-  };
+  };
 
 
 
@@ -2952,15 +2984,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     SELECT ANSWER
+     SELECT ANSWER
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -2968,15 +3000,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  const selectAnswer = async (option) => {
+  const selectAnswer = async (option) => {
 
 
 
-    const question =
+    const question =
 
 
 
-      questions[currentQuestion];
+      questions[currentQuestion];
 
 
 
@@ -2984,7 +3016,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    if (!question) return;
+    if (!question) return;
 
 
 
@@ -2992,19 +3024,19 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    /*
+    /*
 
 
 
-      Already answered?
+      Already answered?
 
 
 
-      Don't allow changing answer.
+      Don't allow changing answer.
 
 
 
-    */
+    */
 
 
 
@@ -3012,31 +3044,31 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    if (
+    if (
 
 
 
-      answeredQuestions[
+      answeredQuestions[
 
 
 
-        question.id
+        question.id
 
 
 
-      ]
+      ]
 
 
 
-    ) {
+    ) {
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -3044,951 +3076,956 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-    const isCorrect =
+    const selectedOption = question.displayOptions?.find((item) => item.letter === option);
 
+    if (!selectedOption) return;
 
+    const isCorrect = selectedOption.original === question.correct_option;
 
-      option ===
 
 
 
-      question.correct_option;
 
 
 
+    const newScore =
 
 
 
+      isCorrect
 
-    const newScore =
 
 
+        ? score + 1
 
-      isCorrect
 
 
+        : score;
 
-        ? score + 1
 
 
 
-        : score;
 
 
 
+    /*
 
 
 
+      Store selected answer
 
-    /*
 
 
+    */
 
-      Store selected answer
 
 
 
-    */
 
 
 
+    setAnswers(
 
 
 
+      (previous) => ({
 
-    setAnswers(
 
 
+        ...previous,
 
-      (previous) => ({
 
 
+        [question.id]:
 
-        ...previous,
 
 
+          option,
 
-        [question.id]:
 
 
+      })
 
-          option,
 
 
+    );
 
-      })
 
 
 
-    );
 
 
 
+    /*
 
 
 
+      Lock question
 
-    /*
 
 
+    */
 
-      Lock question
 
 
 
-    */
 
 
 
+    setAnsweredQuestions(
 
 
 
+      (previous) => ({
 
-    setAnsweredQuestions(
 
 
+        ...previous,
 
-      (previous) => ({
 
 
+        [question.id]:
 
-        ...previous,
 
 
+          true,
 
-        [question.id]:
 
 
+      })
 
-          true,
 
 
+    );
 
-      })
 
 
 
-    );
 
 
 
+    /*
 
 
 
+      Immediately update local UI
 
-    /*
 
 
+    */
 
-      Immediately update local UI
 
 
 
-    */
 
 
 
+    setScore(newScore);
 
 
 
 
-    setScore(newScore);
 
 
 
+    /*
 
 
 
+      Immediately save to Supabase
 
-    /*
 
 
+      -> Admin sees it live
 
-      Immediately save to Supabase
 
 
+    */
 
-      -> Admin sees it live
 
 
 
-    */
 
 
 
+    await saveScore(newScore);
 
 
 
 
-    await saveScore(newScore);
 
 
 
+    /*
 
 
 
+      Immediately calculate rank
 
-    /*
 
 
+    */
 
-      Immediately calculate rank
 
 
 
-    */
 
 
 
+    await updateRank(newScore);
 
 
 
+  };
 
-    await updateRank(newScore);
 
 
 
-  };
 
 
 
+  /* =================================================
 
 
 
+     NEXT QUESTION
 
-  /* =================================================
 
 
+  ================================================= */
 
-     NEXT QUESTION
 
 
 
-  ================================================= */
 
 
 
+  const nextQuestion = () => {
 
 
 
+    if (
 
-  const nextQuestion = () => {
 
 
+      currentQuestion <
 
-    if (
 
 
+      questions.length - 1
 
-      currentQuestion <
 
 
+    ) {
 
-      questions.length - 1
 
 
+      setCurrentQuestion(
 
-    ) {
 
 
+        (previous) =>
 
-      setCurrentQuestion(
 
 
+          previous + 1
 
-        (previous) =>
 
 
+      );
 
-          previous + 1
 
 
+    } else {
 
-      );
 
 
+      submitQuiz(score);
 
-    } else {
 
 
+    }
 
-      submitQuiz(score);
 
 
+  };
 
-    }
 
 
 
-  };
 
 
 
+  /* =================================================
 
 
 
+     PREVIOUS QUESTION
 
-  /* =================================================
 
 
+  ================================================= */
 
-     PREVIOUS QUESTION
 
 
 
-  ================================================= */
 
 
 
+  const previousQuestion = () => {
 
 
 
+    if (currentQuestion > 0) {
 
-  const previousQuestion = () => {
 
 
+      setCurrentQuestion(
 
-    if (currentQuestion > 0) {
 
 
+        (previous) =>
 
-      setCurrentQuestion(
 
 
+          previous - 1
 
-        (previous) =>
 
 
+      );
 
-          previous - 1
 
 
+    }
 
-      );
 
 
+  };
 
-    }
 
 
 
-  };
 
 
 
+  /* =================================================
 
 
 
+     LOADING
 
-  /* =================================================
 
 
+  ================================================= */
 
-     LOADING
 
 
 
-  ================================================= */
 
 
 
+  if (loading) {
 
 
 
+    return (
 
-  if (loading) {
 
 
+      <main className="round-page">
 
-    return (
 
 
+        <div className="round-card">
 
-      <main className="round-page">
 
 
+          <div className="round-number">
 
-        <div className="round-card">
 
 
+            ROUND 01
 
-          <div className="round-number">
 
 
+          </div>
 
-            ROUND 01
 
 
 
-          </div>
 
 
 
+          <h2>LOADING...</h2>
 
 
 
 
-          <h2>LOADING...</h2>
 
 
 
+          <p>
 
 
 
+            Preparing your questions.
 
-          <p>
 
 
+          </p>
 
-            Preparing your questions.
 
 
+        </div>
 
-          </p>
 
 
+      </main>
 
-        </div>
 
 
+    );
 
-      </main>
 
 
+  }
 
-    );
 
 
 
-  }
 
 
 
+  /* =================================================
 
 
 
+     NO QUESTIONS
 
-  /* =================================================
 
 
+  ================================================= */
 
-     NO QUESTIONS
 
 
 
-  ================================================= */
 
 
 
+  if (questions.length === 0) {
 
 
 
+    return (
 
-  if (questions.length === 0) {
 
 
+      <main className="round-page">
 
-    return (
 
 
+        <div className="round-card">
 
-      <main className="round-page">
 
 
+          <div className="round-number">
 
-        <div className="round-card">
 
 
+            ROUND 01
 
-          <div className="round-number">
 
 
+          </div>
 
-            ROUND 01
 
 
 
-          </div>
 
 
 
+          <h2>
 
 
 
+            NO QUESTIONS
 
-          <h2>
 
 
+          </h2>
 
-            NO QUESTIONS
 
 
 
-          </h2>
 
 
 
+          <p>
 
 
 
+            Round 1 questions are not
 
-          <p>
 
 
+            available.
 
-            Round 1 questions are not
 
 
+          </p>
 
-            available.
 
 
+        </div>
 
-          </p>
 
 
+      </main>
 
-        </div>
 
 
+    );
 
-      </main>
 
 
+  }
 
-    );
 
 
 
-  }
 
 
 
+  /* =================================================
 
 
 
+     SECURITY TERMINATION
 
-  /* =================================================
 
 
+  ================================================= */
 
-     SECURITY TERMINATION
 
 
 
-  ================================================= */
 
 
 
+  if (securityTerminated) {
 
 
 
+    return (
 
-  if (securityTerminated) {
 
 
+      <main className="round-page">
 
-    return (
 
 
+        <div className="round-card">
 
-      <main className="round-page">
 
 
+          <div className="round-number">QUIZ TERMINATED</div>
 
-        <div className="round-card">
 
 
+          <h2>TAB / WINDOW SWITCH DETECTED</h2>
 
-          <div className="round-number">QUIZ TERMINATED</div>
 
 
+          <p>You left the quiz window. Your quiz session has been terminated automatically.</p>
 
-          <h2>TAB / WINDOW SWITCH DETECTED</h2>
 
 
+          <div className="status-box"><span>SECURITY STATUS</span><strong>DISQUALIFIED</strong></div>
 
-          <p>You left the quiz window. Your quiz session has been terminated automatically.</p>
 
 
+          <p>Returning to the home screen...</p>
 
-          <div className="status-box"><span>SECURITY STATUS</span><strong>DISQUALIFIED</strong></div>
 
 
+        </div>
 
-          <p>Returning to the home screen...</p>
 
 
+      </main>
 
-        </div>
 
 
+    );
 
-      </main>
 
 
+  }
 
-    );
 
 
 
-  }
 
 
 
+  /* =================================================
 
 
 
+     RESULT
 
-  /* =================================================
 
 
+  ================================================= */
 
-     RESULT
 
 
 
-  ================================================= */
 
 
 
+  if (submitted) {
 
 
 
+    return (
 
-  if (submitted) {
 
 
+      <main className="round-page">
 
-    return (
 
 
+        <div className="round-card">
 
-      <main className="round-page">
 
 
 
-        <div className="round-card">
 
 
 
+          <div className="round-number">
 
 
 
+            ROUND 01 COMPLETED
 
-          <div className="round-number">
 
 
+          </div>
 
-            ROUND 01 COMPLETED
 
 
 
-          </div>
 
 
 
+          <h2>
 
 
 
+            {score} /{" "}
 
-          <h2>
 
 
+            {questions.length}
 
-            {score} /{" "}
 
 
+          </h2>
 
-            {questions.length}
 
 
 
-          </h2>
 
 
 
+          <p>
 
 
 
+            Your Round 1 score has
 
-          <p>
 
 
+            been recorded.
 
-            Your Round 1 score has
 
 
+          </p>
 
-            been recorded.
 
 
 
-          </p>
 
 
 
+          <div className="live-score-box">
 
 
 
 
-          <div className="live-score-box">
 
 
 
+            <div>
 
 
 
+              <div className="live-score-label">
 
-            <div>
 
 
+                YOUR SCORE
 
-              <div className="live-score-label">
 
 
+              </div>
 
-                YOUR SCORE
 
 
 
-              </div>
 
 
 
+              <div className="live-score-value">
 
 
 
+                {score}
 
-              <div className="live-score-value">
 
 
+              </div>
 
-                {score}
 
 
+            </div>
 
-              </div>
 
 
 
-            </div>
 
 
 
+            <div>
 
 
 
+              <div className="live-score-label">
 
-            <div>
 
 
+                POSITION
 
-              <div className="live-score-label">
 
 
+              </div>
 
-                POSITION
 
 
 
-              </div>
 
 
 
+              <div className="live-rank-value">
 
 
 
+                #{rank || "-"}
 
-              <div className="live-rank-value">
 
 
+              </div>
 
-                #{rank || "-"}
 
 
+            </div>
 
-              </div>
 
 
 
-            </div>
 
 
 
+          </div>
 
 
 
 
-          </div>
 
 
 
+          <div className="status-box">
 
 
 
+            <span>TEAM</span>
 
-          <div className="status-box">
 
 
 
-            <span>TEAM</span>
 
 
 
+            <strong>
 
 
 
+              {team?.name || "Team"}
 
-            <strong>
 
 
+            </strong>
 
-              {team?.name || "Team"}
 
 
+          </div>
 
-            </strong>
 
 
 
-          </div>
 
 
 
+          <button
 
 
 
+            className="primary-btn"
 
-          <button
 
 
+            onClick={() =>
 
-            className="primary-btn"
 
 
+              setPage("waiting")
 
-            onClick={() =>
 
 
+            }
 
-              setPage("waiting")
 
 
+          >
 
-            }
 
 
+            Back to Waiting Room
 
-          >
 
 
+          </button>
 
-            Back to Waiting Room
 
 
 
-          </button>
 
 
 
+        </div>
 
 
 
+      </main>
 
-        </div>
 
 
+    );
 
-      </main>
 
 
+  }
 
-    );
 
 
 
-  }
 
 
 
+  /* =================================================
 
 
 
+     CURRENT QUESTION
 
-  /* =================================================
 
 
+  ================================================= */
 
-     CURRENT QUESTION
 
 
 
-  ================================================= */
 
 
 
+  const question =
 
 
 
+    questions[currentQuestion];
 
-  const question =
 
 
 
-    questions[currentQuestion];
 
 
 
+  const selectedAnswer =
 
 
 
+    answers[question.id];
 
-  const selectedAnswer =
 
 
 
-    answers[question.id];
 
 
 
+  const answered = answeredQuestions[question.id];
 
+  const correctDisplayOption = question.displayOptions?.find(
+    (item) => item.original === question.correct_option
+  );
 
+  const correctDisplayLetter =
+    correctDisplayOption?.letter || question.correct_option;
 
+  const progress =
 
-  const answered =
 
 
+    ((currentQuestion + 1) /
 
-    answeredQuestions[
 
 
+      questions.length) *
 
-      question.id
 
 
+    100;
 
-    ];
 
 
 
 
 
 
+  return (
 
-  const progress =
 
 
+    <main className="quiz-page">
 
-    ((currentQuestion + 1) /
 
 
 
-      questions.length) *
 
 
 
-    100;
+      {/* HEADER */}
 
 
 
@@ -3996,687 +4033,587 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-  return (
+      <div className="quiz-header">
 
 
 
-    <main className="quiz-page">
 
 
 
 
+        <div>
 
 
 
-      {/* HEADER */}
+          <div className="round-number">
 
 
 
+            ROUND 01
 
 
 
+          </div>
 
-      <div className="quiz-header">
 
 
 
 
 
 
+          <h2>
 
-        <div>
 
 
+            Web Designing
 
-          <div className="round-number">
 
 
+          </h2>
 
-            ROUND 01
 
 
+        </div>
 
-          </div>
 
 
 
 
 
 
+        <div
 
-          <h2>
 
 
+          className={
 
-            Web Designing
 
 
+            timeLeft <= 30
 
-          </h2>
 
 
+              ? "quiz-timer danger"
 
-        </div>
 
 
+              : "quiz-timer"
 
 
 
+          }
 
 
-        <div
 
+        >
 
 
-          className={
 
+          <span>
 
 
-            timeLeft <= 30
 
+            TIME LEFT
 
 
-              ? "quiz-timer danger"
 
+          </span>
 
 
-              : "quiz-timer"
 
 
 
-          }
 
 
+          <strong>
 
-        >
 
 
+            {formatTime(timeLeft)}
 
-          <span>
 
 
+          </strong>
 
-            TIME LEFT
 
 
+        </div>
 
-          </span>
 
 
 
 
 
 
+      </div>
 
-          <strong>
 
 
 
-            {formatTime(timeLeft)}
 
 
 
-          </strong>
+      {/* LIVE SCORE */}
 
 
 
-        </div>
 
 
 
 
+      <div className="live-score-box">
 
 
 
-      </div>
 
 
 
 
+        <div>
 
 
 
-      {/* LIVE SCORE */}
+          <div className="live-score-label">
 
 
 
+            LIVE SCORE
 
 
 
+          </div>
 
-      <div className="live-score-box">
 
 
 
 
 
 
+          <div className="live-score-value">
 
-        <div>
 
 
+            {score}
 
-          <div className="live-score-label">
 
 
+          </div>
 
-            LIVE SCORE
 
 
+        </div>
 
-          </div>
 
 
 
 
 
 
+        <div>
 
-          <div className="live-score-value">
 
 
+          <div className="live-score-label">
 
-            {score}
 
 
+            LIVE POSITION
 
-          </div>
 
 
+          </div>
 
-        </div>
 
 
 
 
 
 
+          <div className="live-rank-value">
 
-        <div>
 
 
+            #{rank || "-"}
 
-          <div className="live-score-label">
 
 
+          </div>
 
-            LIVE POSITION
 
 
+        </div>
 
-          </div>
 
 
 
 
 
 
+      </div>
 
-          <div className="live-rank-value">
 
 
 
-            #{rank || "-"}
 
 
 
-          </div>
+      {/* PROGRESS */}
 
 
 
-        </div>
 
 
 
 
+      <div className="quiz-progress">
 
 
 
-      </div>
 
 
 
 
+        <div className="progress-info">
 
 
 
-      {/* PROGRESS */}
+          <span>
 
 
 
+            Question{" "}
 
 
 
+            {currentQuestion + 1}{" "}
 
-      <div className="quiz-progress">
 
 
+            of{" "}
 
 
 
+            {questions.length}
 
 
-        <div className="progress-info">
 
+          </span>
 
 
-          <span>
 
 
 
-            Question{" "}
 
 
+          <span>
 
-            {currentQuestion + 1}{" "}
 
 
+            {Math.round(progress)}%
 
-            of{" "}
 
 
+          </span>
 
-            {questions.length}
 
 
+        </div>
 
-          </span>
 
 
 
 
 
 
+        <div className="progress-track">
 
-          <span>
 
 
+          <div
 
-            {Math.round(progress)}%
 
 
+            className="progress-fill"
 
-          </span>
 
 
+            style={{
 
-        </div>
 
 
+              width: `${progress}%`,
 
 
 
+            }}
 
 
-        <div className="progress-track">
 
+          />
 
 
-          <div
 
+        </div>
 
 
-            className="progress-fill"
 
 
 
-            style={{
 
 
+      </div>
 
-              width: `${progress}%`,
 
 
 
-            }}
 
 
 
-          />
+      {/* QUESTION */}
 
 
 
-        </div>
 
 
 
 
+      <div className="question-card">
 
 
 
-      </div>
 
 
 
 
+        <div className="question-number">
 
 
 
-      {/* QUESTION */}
+          QUESTION{" "}
 
 
 
+          {String(
 
 
 
+            currentQuestion + 1
 
-      <div className="question-card">
 
 
+          ).padStart(2, "0")}
 
 
 
+        </div>
 
 
-        <div className="question-number">
 
 
 
-          QUESTION{" "}
 
 
+        <h1>
 
-          {String(
 
 
+          {question.question_text}
 
-            currentQuestion + 1
 
 
+        </h1>
 
-          ).padStart(2, "0")}
 
 
 
-        </div>
 
 
 
+        <div className="options-grid">
 
 
 
 
-        <h1>
 
 
 
-          {question.question_text}
+          {(question.displayOptions || []).map(({ letter, text, original }) => {
 
 
 
-        </h1>
 
 
 
 
+              const isSelected =
 
 
 
-        <div className="options-grid">
+                selectedAnswer ===
 
 
 
+                letter;
 
 
 
 
-          {[
 
 
 
-            [
+              const isCorrect = question.correct_option === original;
 
 
 
-              "A",
 
 
 
-              question.option_a,
 
+              let optionClass =
 
 
-            ],
 
+                "quiz-option";
 
 
-            [
 
 
 
-              "B",
 
 
+              /*
 
-              question.option_b,
 
 
+                AFTER ANSWER:
 
-            ],
 
 
 
-            [
 
 
 
-              "C",
+                Correct = GREEN
 
 
 
-              question.option_c,
 
 
 
-            ],
 
+                Selected wrong = RED
 
 
-            [
 
+              */
 
 
-              "D",
 
 
 
-              question.option_d,
 
 
+              if (answered) {
 
-            ],
 
 
 
-          ].map(
 
 
 
-            ([letter, text]) => {
+                if (isCorrect) {
 
 
 
+                  optionClass +=
 
 
 
+                    " option-correct";
 
-              const isSelected =
 
 
+                }
 
-                selectedAnswer ===
 
 
 
-                letter;
 
 
 
+                if (
 
 
 
+                  isSelected &&
 
-              const isCorrect =
 
 
+                  !isCorrect
 
-                question.correct_option ===
 
 
+                ) {
 
-                letter;
 
 
+                  optionClass +=
 
 
 
+                    " option-wrong";
 
 
-              let optionClass =
 
+                }
 
 
-                "quiz-option";
 
 
 
 
 
+                optionClass +=
 
 
-              /*
 
+                  " option-disabled";
 
 
-                AFTER ANSWER:
 
+              }
 
 
 
 
 
 
-                Correct = GREEN
 
+              return (
 
 
 
+                <button
 
 
 
-                Selected wrong = RED
+                  key={letter}
 
 
 
-              */
+                  className={
 
 
 
+                    optionClass
 
 
 
+                  }
 
-              if (answered) {
 
 
-
-
-
-
-
-                if (isCorrect) {
-
-
-
-                  optionClass +=
-
-
-
-                    " option-correct";
-
-
-
-                }
-
-
-
-
-
-
-
-                if (
-
-
-
-                  isSelected &&
-
-
-
-                  !isCorrect
-
-
-
-                ) {
-
-
-
-                  optionClass +=
-
-
-
-                    " option-wrong";
-
-
-
-                }
-
-
-
-
-
-
-
-                optionClass +=
-
-
-
-                  " option-disabled";
-
-
-
-              }
-
-
-
-
-
-
-
-              return (
-
-
-
-                <button
-
-
-
-                  key={letter}
-
-
-
-                  className={
-
-
-
-                    optionClass
-
-
-
-                  }
-
-
-
-                  style={
+                  style={
                     answered
                       ? {
                           background: isCorrect ? "#16a34a" : isSelected ? "#dc2626" : undefined,
@@ -4690,35 +4627,35 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-                    answered
+                    answered
 
 
 
-                  }
+                  }
 
 
 
-                  onClick={() =>
+                  onClick={() =>
 
 
 
-                    selectAnswer(
+                    selectAnswer(
 
 
 
-                      letter
+                      letter
 
 
 
-                    )
+                    )
 
 
 
-                  }
+                  }
 
 
 
-                >
+                >
 
 
 
@@ -4726,15 +4663,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-                  <span className="option-letter">
+                  <span className="option-letter">
 
 
 
-                    {letter}
+                    {letter}
 
 
 
-                  </span>
+                  </span>
 
 
 
@@ -4742,15 +4679,15 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-                  <span className="option-text">
+                  <span className="option-text">
 
 
 
-                    {text}
+                    {text}
 
 
 
-                  </span>
+                  </span>
 
 
 
@@ -4758,19 +4695,19 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-                </button>
+                </button>
 
 
 
-              );
+              );
 
 
 
-            }
+            }
 
 
 
-          )}
+          )}
 
 
 
@@ -4778,7 +4715,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        </div>
+        </div>
 
 
 
@@ -4786,7 +4723,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        {/* FEEDBACK */}
+        {/* FEEDBACK */}
 
 
 
@@ -4794,188 +4731,180 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-        {answered && (
+        {answered && (
 
 
 
-          <div
+          <div
 
 
 
-            className={
+            className={
 
 
 
-              selectedAnswer ===
+              selectedAnswer === correctDisplayLetter
 
 
 
-              question.correct_option
+                ? "answer-feedback correct"
 
 
 
-                ? "answer-feedback correct"
+                : "answer-feedback wrong"
 
 
 
-                : "answer-feedback wrong"
+            }
 
 
 
-            }
+          >
 
 
 
-          >
+            {selectedAnswer === correctDisplayLetter
 
 
 
-            {selectedAnswer ===
+              ? "✓ Correct Answer"
+              : `✕ Wrong Answer — Correct Answer: ${correctDisplayLetter}`}
 
 
 
-            question.correct_option
+          </div>
 
 
 
-              ? "✓ Correct Answer"
-              : `✕ Wrong Answer — Correct Answer: ${question.correct_option}`}
+        )}
 
 
 
-          </div>
 
 
 
-        )}
 
+        {/* CONTROLS */}
 
 
 
 
 
 
-        {/* CONTROLS */}
 
+        <div className="quiz-controls">
 
 
 
 
 
 
-        <div className="quiz-controls">
 
+          <button
 
 
 
+            className="secondary-btn"
 
 
 
-          <button
+            onClick={
 
 
 
-            className="secondary-btn"
+              previousQuestion
 
 
 
-            onClick={
+            }
 
 
 
-              previousQuestion
+            disabled={
 
 
 
-            }
+              currentQuestion === 0
 
 
 
-            disabled={
+            }
 
 
 
-              currentQuestion === 0
+          >
 
 
 
-            }
+            ← Previous
 
 
 
-          >
+          </button>
 
 
 
-            ← Previous
 
 
 
-          </button>
 
+          <button
 
 
 
+            className="primary-btn"
 
 
 
-          <button
+            onClick={nextQuestion}
 
 
 
-            className="primary-btn"
+          >
 
 
 
-            onClick={nextQuestion}
+            {currentQuestion <
 
 
 
-          >
+            questions.length - 1
 
 
 
-            {currentQuestion <
+              ? "Next →"
 
 
 
-            questions.length - 1
+              : "Submit Quiz ✓"}
 
 
 
-              ? "Next →"
+          </button>
 
 
 
-              : "Submit Quiz ✓"}
 
 
 
-          </button>
 
+        </div>
 
 
 
 
 
 
-        </div>
 
+      </div>
 
 
 
+    </main>
 
 
 
-      </div>
-
-
-
-    </main>
-
-
-
-  );
+  );
 
 
 
@@ -4991,7 +4920,7 @@ function Round1Quiz({ team, setPage, setTeam }) {
 
 
 
-   ROUND 2
+   ROUND 2
 
 
 
@@ -5007,35 +4936,35 @@ function Round2Page({ team, setPage }) {
 
 
 
-  const [assignment, setAssignment] = useState(null);
+  const [assignment, setAssignment] = useState(null);
 
 
 
-  const [timeLeft, setTimeLeft] = useState(ROUND_2_TIME);
+  const [timeLeft, setTimeLeft] = useState(ROUND_2_TIME);
 
 
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
 
 
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
 
 
-  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
 
 
 
-  const [screenshotUrl, setScreenshotUrl] = useState("");
+  const [screenshotUrl, setScreenshotUrl] = useState("");
 
 
 
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
 
 
 
-  const [startedAt, setStartedAt] = useState(null);
+  const [startedAt, setStartedAt] = useState(null);
 
 
 
@@ -5043,35 +4972,35 @@ function Round2Page({ team, setPage }) {
 
 
 
-  const loadAssignment = useCallback(async () => {
+  const loadAssignment = useCallback(async () => {
 
 
 
-    if (!team?.id) return;
+    if (!team?.id) return;
 
 
 
-    const { data: qualification } = await supabase
+    const { data: qualification } = await supabase
 
 
 
-      .from("round_qualifications")
+      .from("round_qualifications")
 
 
 
-      .select("qualified")
+      .select("qualified")
 
 
 
-      .eq("team_id", team.id)
+      .eq("team_id", team.id)
 
 
 
-      .eq("round", 2)
+      .eq("round", 2)
 
 
 
-      .maybeSingle();
+      .maybeSingle();
 
 
 
@@ -5079,23 +5008,23 @@ function Round2Page({ team, setPage }) {
 
 
 
-    if (!qualification?.qualified) {
+    if (!qualification?.qualified) {
 
 
 
-      alert("Your team is not qualified for Round 2.");
+      alert("Your team is not qualified for Round 2.");
 
 
 
-      setPage("waiting");
+      setPage("waiting");
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -5103,23 +5032,23 @@ function Round2Page({ team, setPage }) {
 
 
 
-    const { data, error } = await supabase
+    const { data, error } = await supabase
 
 
 
-      .from("round2_assignments")
+      .from("round2_assignments")
 
 
 
-      .select("id, challenge_id, assigned_at, round2_challenges(id, challenge_title, challenge_description)")
+      .select("id, challenge_id, assigned_at, round2_challenges(id, challenge_title, challenge_description)")
 
 
 
-      .eq("team_id", team.id)
+      .eq("team_id", team.id)
 
 
 
-      .maybeSingle();
+      .maybeSingle();
 
 
 
@@ -5127,27 +5056,27 @@ function Round2Page({ team, setPage }) {
 
 
 
-    if (error || !data) {
+    if (error || !data) {
 
 
 
-      console.error(error);
+      console.error(error);
 
 
 
-      alert("Round 2 challenge has not been assigned yet.");
+      alert("Round 2 challenge has not been assigned yet.");
 
 
 
-      setPage("waiting");
+      setPage("waiting");
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -5155,23 +5084,23 @@ function Round2Page({ team, setPage }) {
 
 
 
-    const { data: eventState } = await supabase
+    const { data: eventState } = await supabase
 
 
 
-      .from("event_state")
+      .from("event_state")
 
 
 
-      .select("status, updated_at")
+      .select("status, updated_at")
 
 
 
-      .eq("id", 1)
+      .eq("id", 1)
 
 
 
-      .single();
+      .single();
 
 
 
@@ -5179,19 +5108,19 @@ function Round2Page({ team, setPage }) {
 
 
 
-    if (eventState?.status !== "ROUND_2") {
+    if (eventState?.status !== "ROUND_2") {
 
 
 
-      setPage("waiting");
+      setPage("waiting");
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -5199,19 +5128,19 @@ function Round2Page({ team, setPage }) {
 
 
 
-    setAssignment(data);
+    setAssignment(data);
 
 
 
-    // Round 2 timer starts when the admin starts Round 2,
+    // Round 2 timer starts when the admin starts Round 2,
 
 
 
-    // not when the challenge was assigned.
+    // not when the challenge was assigned.
 
 
 
-    setStartedAt(eventState.updated_at || new Date().toISOString());
+    setStartedAt(eventState.updated_at || new Date().toISOString());
 
 
 
@@ -5219,23 +5148,23 @@ function Round2Page({ team, setPage }) {
 
 
 
-    const { data: submission } = await supabase
+    const { data: submission } = await supabase
 
 
 
-      .from("round2_submissions")
+      .from("round2_submissions")
 
 
 
-      .select("submission_url, screenshot_url, submitted_at")
+      .select("submission_url, screenshot_url, submitted_at")
 
 
 
-      .eq("team_id", team.id)
+      .eq("team_id", team.id)
 
 
 
-      .maybeSingle();
+      .maybeSingle();
 
 
 
@@ -5243,23 +5172,23 @@ function Round2Page({ team, setPage }) {
 
 
 
-    if (submission) {
+    if (submission) {
 
 
 
-      setWebsiteUrl(submission.submission_url || "");
+      setWebsiteUrl(submission.submission_url || "");
 
 
 
-      setScreenshotUrl(submission.screenshot_url || "");
+      setScreenshotUrl(submission.screenshot_url || "");
 
 
 
-      setSubmitted(true);
+      setSubmitted(true);
 
 
 
-    }
+    }
 
 
 
@@ -5267,11 +5196,11 @@ function Round2Page({ team, setPage }) {
 
 
 
-    setLoading(false);
+    setLoading(false);
 
 
 
-  }, [team?.id, setPage]);
+  }, [team?.id, setPage]);
 
 
 
@@ -5279,7 +5208,7 @@ function Round2Page({ team, setPage }) {
 
 
 
-  useEffect(() => { loadAssignment(); }, [loadAssignment]);
+  useEffect(() => { loadAssignment(); }, [loadAssignment]);
 
 
 
@@ -5287,43 +5216,43 @@ function Round2Page({ team, setPage }) {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    if (!startedAt || submitted) return;
+    if (!startedAt || submitted) return;
 
 
 
-    const tick = () => {
+    const tick = () => {
 
 
 
-      const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+      const elapsed = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
 
 
 
-      setTimeLeft(Math.max(0, ROUND_2_TIME - elapsed));
+      setTimeLeft(Math.max(0, ROUND_2_TIME - elapsed));
 
 
 
-    };
+    };
 
 
 
-    tick();
+    tick();
 
 
 
-    const interval = setInterval(tick, 1000);
+    const interval = setInterval(tick, 1000);
 
 
 
-    return () => clearInterval(interval);
+    return () => clearInterval(interval);
 
 
 
-  }, [startedAt, submitted]);
+  }, [startedAt, submitted]);
 
 
 
@@ -5331,93 +5260,93 @@ function Round2Page({ team, setPage }) {
 
 
 
-  const submitChallenge = async (auto = false) => {
+  const submitChallenge = async (auto = false) => {
 
 
 
-    if (submitted || saving) return;
+    if (submitted || saving) return;
 
 
 
-    if (!auto && !websiteUrl.trim() && !screenshotUrl.trim()) {
+    if (!auto && !websiteUrl.trim() && !screenshotUrl.trim()) {
 
-      alert("Website URL or Screenshot URL submit pannunga.");
+      alert("Website URL or Screenshot URL submit pannunga.");
 
-      return;
+      return;
 
-    }
+    }
 
 
 
-    setSaving(true);
+    setSaving(true);
 
 
 
-    const { error } = await supabase
+    const { error } = await supabase
 
 
 
-      .from("round2_submissions")
+      .from("round2_submissions")
 
 
 
-      .upsert({
+      .upsert({
 
 
 
-        team_id: team.id,
+        team_id: team.id,
 
 
 
-        submission_url: websiteUrl.trim() || null,
+        submission_url: websiteUrl.trim() || null,
 
 
 
-        screenshot_url: screenshotUrl.trim() || null,
+        screenshot_url: screenshotUrl.trim() || null,
 
 
 
-        submitted_at: new Date().toISOString(),
+        submitted_at: new Date().toISOString(),
 
 
 
-      }, { onConflict: "team_id" });
+      }, { onConflict: "team_id" });
 
 
 
-    setSaving(false);
+    setSaving(false);
 
 
 
-    if (error) {
+    if (error) {
 
 
 
-      console.error(error);
+      console.error(error);
 
 
 
-      alert(error.message);
+      alert(error.message);
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
-    setSubmitted(true);
+    setSubmitted(true);
 
 
 
-    alert(auto ? "Time over. Your submission has been saved." : "Round 2 submission saved!");
+    alert(auto ? "Time over. Your submission has been saved." : "Round 2 submission saved!");
 
 
 
-  };
+  };
 
 
 
@@ -5425,15 +5354,15 @@ function Round2Page({ team, setPage }) {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    if (timeLeft === 0 && !submitted) submitChallenge(true);
+    if (timeLeft === 0 && !submitted) submitChallenge(true);
 
 
 
-  }, [timeLeft, submitted]);
+  }, [timeLeft, submitted]);
 
 
 
@@ -5441,7 +5370,7 @@ function Round2Page({ team, setPage }) {
 
 
 
-  const formatTime = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  const formatTime = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
 
 
@@ -5449,15 +5378,15 @@ function Round2Page({ team, setPage }) {
 
 
 
-  if (loading) return (
+  if (loading) return (
 
 
 
-    <main className="round-page"><div className="round-card"><div className="round-number">ROUND 02</div><h2>LOADING CHALLENGE...</h2><p>Preparing your team challenge.</p></div></main>
+    <main className="round-page"><div className="round-card"><div className="round-number">ROUND 02</div><h2>LOADING CHALLENGE...</h2><p>Preparing your team challenge.</p></div></main>
 
 
 
-  );
+  );
 
 
 
@@ -5465,7 +5394,7 @@ function Round2Page({ team, setPage }) {
 
 
 
-  if (!assignment?.round2_challenges) return null;
+  if (!assignment?.round2_challenges) return null;
 
 
 
@@ -5473,7 +5402,7 @@ function Round2Page({ team, setPage }) {
 
 
 
-  const challenge = assignment.round2_challenges;
+  const challenge = assignment.round2_challenges;
 
 
 
@@ -5481,35 +5410,35 @@ function Round2Page({ team, setPage }) {
 
 
 
-  return (
+  return (
 
 
 
-    <main className="round-page">
+    <main className="round-page">
 
 
 
-      <div className="round-card" style={{ maxWidth: 900, width: "100%" }}>
+      <div className="round-card" style={{ maxWidth: 900, width: "100%" }}>
 
 
 
-        <div className="round-number">ROUND 02 • UI DESIGN CHALLENGE</div>
+        <div className="round-number">ROUND 02 • UI DESIGN CHALLENGE</div>
 
 
 
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
 
 
 
-          <div><h2>{challenge.challenge_title}</h2><p>Only your team can see this assigned challenge.</p></div>
+          <div><h2>{challenge.challenge_title}</h2><p>Only your team can see this assigned challenge.</p></div>
 
 
 
-          <div className={`quiz-timer ${timeLeft <= 60 ? "danger" : ""}`}><span>TIME LEFT</span><strong>{formatTime(timeLeft)}</strong></div>
+          <div className={`quiz-timer ${timeLeft <= 60 ? "danger" : ""}`}><span>TIME LEFT</span><strong>{formatTime(timeLeft)}</strong></div>
 
 
 
-        </div>
+        </div>
 
 
 
@@ -5517,23 +5446,23 @@ function Round2Page({ team, setPage }) {
 
 
 
-        <div className="question-card" style={{ marginTop: 20 }}>
+        <div className="question-card" style={{ marginTop: 20 }}>
 
 
 
-          <div className="question-number">YOUR UNIQUE TASK</div>
+          <div className="question-number">YOUR UNIQUE TASK</div>
 
 
 
-          <h1 style={{ fontSize: "clamp(20px, 3vw, 32px)" }}>{challenge.challenge_description}</h1>
+          <h1 style={{ fontSize: "clamp(20px, 3vw, 32px)" }}>{challenge.challenge_description}</h1>
 
 
 
-          <div className="status-box" style={{ marginTop: 20 }}><span>TIME LIMIT</span><strong>30:00</strong></div>
+          <div className="status-box" style={{ marginTop: 20 }}><span>TIME LIMIT</span><strong>30:00</strong></div>
 
 
 
-        </div>
+        </div>
 
 
 
@@ -5541,75 +5470,75 @@ function Round2Page({ team, setPage }) {
 
 
 
-        {!submitted ? (
+        {!submitted ? (
 
 
 
-          <div style={{ marginTop: 20 }}>
+          <div style={{ marginTop: 20 }}>
 
 
 
-            <label>Website / Live URL</label>
+            <label>Website / Live URL</label>
 
 
 
-            <input type="url" placeholder="https\\://..." value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} />
+            <input type="url" placeholder="https\\://..." value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} />
 
 
 
-            <label style={{ marginTop: 12, display: "block" }}>Screenshot URL (optional)</label>
+            <label style={{ marginTop: 12, display: "block" }}>Screenshot URL (optional)</label>
 
 
 
-            <input type="url" placeholder="https\\://..." value={screenshotUrl} onChange={e => setScreenshotUrl(e.target.value)} />
+            <input type="url" placeholder="https\\://..." value={screenshotUrl} onChange={e => setScreenshotUrl(e.target.value)} />
 
 
 
-            <p style={{ fontSize: 12, opacity: .75, marginTop: 10 }}>You can build the website using your preferred editor/tool during the 30 minutes.</p>
+            <p style={{ fontSize: 12, opacity: .75, marginTop: 10 }}>You can build the website using your preferred editor/tool during the 30 minutes.</p>
 
 
 
-            <button className="primary-btn full" onClick={() => submitChallenge(false)} disabled={saving || timeLeft === 0}>{saving ? "Submitting..." : "Submit Challenge ✓"}</button>
+            <button className="primary-btn full" onClick={() => submitChallenge(false)} disabled={saving || timeLeft === 0}>{saving ? "Submitting..." : "Submit Challenge ✓"}</button>
 
 
 
-          </div>
+          </div>
 
 
 
-        ) : (
+        ) : (
 
 
 
-          <div style={{ marginTop: 20 }}>
+          <div style={{ marginTop: 20 }}>
 
 
 
-            <div className="status-box"><span>SUBMISSION STATUS</span><strong>SUBMITTED ✓</strong></div>
+            <div className="status-box"><span>SUBMISSION STATUS</span><strong>SUBMITTED ✓</strong></div>
 
 
 
-            <p style={{ marginTop: 12 }}>Your Round 2 submission has been recorded.</p>
+            <p style={{ marginTop: 12 }}>Your Round 2 submission has been recorded.</p>
 
 
 
-          </div>
+          </div>
 
 
 
-        )}
+        )}
 
 
 
-      </div>
+      </div>
 
 
 
-    </main>
+    </main>
 
 
 
-  );
+  );
 
 
 
@@ -5625,7 +5554,7 @@ function Round2Page({ team, setPage }) {
 
 
 
-   ADMIN PANEL
+   ADMIN PANEL
 
 
 
@@ -5778,11 +5707,11 @@ function AdminPanel() {
 
 
 
-  const [loggedIn, setLoggedIn] =
+  const [loggedIn, setLoggedIn] =
 
 
 
-    useState(false);
+    useState(false);
 
 
 
@@ -5790,11 +5719,11 @@ function AdminPanel() {
 
 
 
-  const [pin, setPin] =
+  const [pin, setPin] =
 
 
 
-    useState("");
+    useState("");
 
 
 
@@ -5802,11 +5731,11 @@ function AdminPanel() {
 
 
 
-  const [status, setStatus] =
+  const [status, setStatus] =
 
 
 
-    useState("WAITING");
+    useState("WAITING");
 
 
 
@@ -5814,11 +5743,11 @@ function AdminPanel() {
 
 
 
-  const [teams, setTeams] =
+  const [teams, setTeams] =
 
 
 
-    useState([]);
+    useState([]);
 
 
 
@@ -5826,11 +5755,11 @@ function AdminPanel() {
 
 
 
-  const [loading, setLoading] =
+  const [loading, setLoading] =
 
 
 
-    useState(false);
+    useState(false);
 
 
 
@@ -5838,31 +5767,31 @@ function AdminPanel() {
 
 
 
-  const [topN, setTopN] = useState(1);
+  const [topN, setTopN] = useState(1);
 
 
 
-  const [qualificationConfirmed, setQualificationConfirmed] = useState(false);
+  const [qualificationConfirmed, setQualificationConfirmed] = useState(false);
 
 
 
-  const [qualifiedTeams, setQualifiedTeams] = useState([]);
+  const [qualifiedTeams, setQualifiedTeams] = useState([]);
 
 
 
-  const [challengeText, setChallengeText] = useState(
+  const [challengeText, setChallengeText] = useState(
 
 
 
-    "College Event Registration Website\nOnline Food Ordering Website\nHospital Appointment Website\nE-Learning Dashboard\nTravel Booking Website\nJob Portal Landing Page\nCollege Club Management Website\nMovie Ticket Booking Website\nFitness Tracker Dashboard\nAI Product Landing Page"
+    "College Event Registration Website\nOnline Food Ordering Website\nHospital Appointment Website\nE-Learning Dashboard\nTravel Booking Website\nJob Portal Landing Page\nCollege Club Management Website\nMovie Ticket Booking Website\nFitness Tracker Dashboard\nAI Product Landing Page"
 
 
 
-  );
+  );
 
 
 
-  const [assignments, setAssignments] = useState([]);
+  const [assignments, setAssignments] = useState([]);
   const [round2Submissions, setRound2Submissions] = useState([]);
   const [judgingScores, setJudgingScores] = useState({});
 
@@ -5872,31 +5801,31 @@ function AdminPanel() {
 
 
 
-  const login = () => {
+  const login = () => {
 
 
 
-    if (pin === ADMIN_PIN) {
+    if (pin === ADMIN_PIN) {
 
 
 
-      setLoggedIn(true);
+      setLoggedIn(true);
 
 
 
-    } else {
+    } else {
 
 
 
-      alert("Wrong Admin PIN");
+      alert("Wrong Admin PIN");
 
 
 
-    }
+    }
 
 
 
-  };
+  };
 
 
 
@@ -5904,15 +5833,15 @@ function AdminPanel() {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     LOAD TEAMS + STATUS
+     LOAD TEAMS + STATUS
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -5920,35 +5849,35 @@ function AdminPanel() {
 
 
 
-  const loadData = useCallback(
+  const loadData = useCallback(
 
 
 
-    async () => {
+    async () => {
 
 
 
-      const event =
+      const event =
 
 
 
-        await supabase
+        await supabase
 
 
 
-          .from("event_state")
+          .from("event_state")
 
 
 
-          .select("*")
+          .select("*")
 
 
 
-          .eq("id", 1)
+          .eq("id", 1)
 
 
 
-          .single();
+          .single();
 
 
 
@@ -5956,23 +5885,23 @@ function AdminPanel() {
 
 
 
-      if (event.data) {
+      if (event.data) {
 
 
 
-        setStatus(
+        setStatus(
 
 
 
-          event.data.status
+          event.data.status
 
 
 
-        );
+        );
 
 
 
-      }
+      }
 
 
 
@@ -5980,43 +5909,43 @@ function AdminPanel() {
 
 
 
-      const teamData =
+      const teamData =
 
 
 
-        await supabase
+        await supabase
 
 
 
-          .from("teams")
+          .from("teams")
 
 
 
-          .select("*")
+          .select("*")
 
 
 
-          .order(
+          .order(
 
 
 
-            "created_at",
+            "created_at",
 
 
 
-            {
+            {
 
 
 
-              ascending: true,
+              ascending: true,
 
 
 
-            }
+            }
 
 
 
-          );
+          );
 
 
 
@@ -6024,35 +5953,35 @@ function AdminPanel() {
 
 
 
-      if (teamData.data) {
+      if (teamData.data) {
 
 
 
-        setTeams(
+        setTeams(
 
 
 
-          teamData.data
+          teamData.data
 
 
 
-        );
+        );
 
 
 
-      }
+      }
 
 
 
-    },
+    },
 
 
 
-    []
+    []
 
 
 
-  );
+  );
 
 
 
@@ -6060,47 +5989,47 @@ function AdminPanel() {
 
 
 
-  const loadQualificationData = useCallback(async () => {
+  const loadQualificationData = useCallback(async () => {
 
 
 
-    const { data: q } = await supabase
+    const { data: q } = await supabase
 
 
 
-      .from("round_qualifications")
+      .from("round_qualifications")
 
 
 
-      .select("team_id, qualified")
+      .select("team_id, qualified")
 
 
 
-      .eq("round", 2);
+      .eq("round", 2);
 
 
 
-    const qualifiedIds = new Set((q || []).filter(x => x.qualified).map(x => x.team_id));
+    const qualifiedIds = new Set((q || []).filter(x => x.qualified).map(x => x.team_id));
 
 
 
-    setQualifiedTeams(teams.filter(t => qualifiedIds.has(t.id)));
+    setQualifiedTeams(teams.filter(t => qualifiedIds.has(t.id)));
 
 
 
-    const { data: a } = await supabase
+    const { data: a } = await supabase
 
 
 
-      .from("round2_assignments")
+      .from("round2_assignments")
 
 
 
-      .select("team_id, challenge_id, round2_challenges(id, challenge_title, challenge_description)");
+      .select("team_id, challenge_id, round2_challenges(id, challenge_title, challenge_description)");
 
 
 
-    setAssignments(a || []);
+    setAssignments(a || []);
 
     const { data: submissions } = await supabase
       .from("round2_submissions")
@@ -6137,7 +6066,7 @@ function AdminPanel() {
 
 
 
-  }, [teams]);
+  }, [teams]);
 
 
 
@@ -6145,19 +6074,19 @@ function AdminPanel() {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    if (!loggedIn) return;
+    if (!loggedIn) return;
 
 
 
-    loadQualificationData();
+    loadQualificationData();
 
 
 
-  }, [loggedIn, loadQualificationData]);
+  }, [loggedIn, loadQualificationData]);
 
 
 
@@ -6165,15 +6094,15 @@ function AdminPanel() {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     ROUND 1 QUALIFICATION
+     ROUND 1 QUALIFICATION
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -6181,27 +6110,27 @@ function AdminPanel() {
 
 
 
-  const confirmQualification = async () => {
+  const confirmQualification = async () => {
 
 
 
-    const count = Number(topN);
+    const count = Number(topN);
 
 
 
-    if (!Number.isInteger(count) || count < 1) {
+    if (!Number.isInteger(count) || count < 1) {
 
 
 
-      alert("Valid Top N enter pannunga.");
+      alert("Valid Top N enter pannunga.");
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -6209,23 +6138,23 @@ function AdminPanel() {
 
 
 
-    const { data: scoreRows, error } = await supabase
+    const { data: scoreRows, error } = await supabase
 
 
 
-      .from("round_scores")
+      .from("round_scores")
 
 
 
-      .select("team_id, score, updated_at")
+      .select("team_id, score, updated_at")
 
 
 
-      .eq("round", 1);
+      .eq("round", 1);
 
 
 
-    if (error) { alert(error.message); return; }
+    if (error) { alert(error.message); return; }
 
 
 
@@ -6233,15 +6162,15 @@ function AdminPanel() {
 
 
 
-    const teamMap = new Map(teams.map(t => [t.id, t]));
+    const teamMap = new Map(teams.map(t => [t.id, t]));
 
 
 
-    const ranked = (scoreRows || []).map(r => ({ ...r, name: teamMap.get(r.team_id)?.name || "Unknown Team" }))
+    const ranked = (scoreRows || []).map(r => ({ ...r, name: teamMap.get(r.team_id)?.name || "Unknown Team" }))
 
 
 
-      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 
 
 
@@ -6249,23 +6178,23 @@ function AdminPanel() {
 
 
 
-    const selected = ranked.slice(0, Math.min(count, ranked.length));
+    const selected = ranked.slice(0, Math.min(count, ranked.length));
 
 
 
-    if (selected.length < count) {
+    if (selected.length < count) {
 
 
 
-      alert(`Only ${selected.length} teams have Round 1 scores.`);
+      alert(`Only ${selected.length} teams have Round 1 scores.`);
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -6273,31 +6202,31 @@ function AdminPanel() {
 
 
 
-    setLoading(true);
+    setLoading(true);
 
 
 
-    await supabase.from("round_qualifications").delete().eq("round", 2);
+    await supabase.from("round_qualifications").delete().eq("round", 2);
 
 
 
-    const { error: insertError } = await supabase.from("round_qualifications").insert(
+    const { error: insertError } = await supabase.from("round_qualifications").insert(
 
 
 
-      selected.map(x => ({ team_id: x.team_id, round: 2, qualified: true }))
+      selected.map(x => ({ team_id: x.team_id, round: 2, qualified: true }))
 
 
 
-    );
+    );
 
 
 
-    setLoading(false);
+    setLoading(false);
 
 
 
-    if (insertError) { alert(insertError.message); return; }
+    if (insertError) { alert(insertError.message); return; }
 
 
 
@@ -6305,19 +6234,19 @@ function AdminPanel() {
 
 
 
-    setQualifiedTeams(selected.map(x => teamMap.get(x.team_id)).filter(Boolean));
+    setQualifiedTeams(selected.map(x => teamMap.get(x.team_id)).filter(Boolean));
 
 
 
-    setQualificationConfirmed(true);
+    setQualificationConfirmed(true);
 
 
 
-    alert(`${selected.length} teams qualified for Round 2.`);
+    alert(`${selected.length} teams qualified for Round 2.`);
 
 
 
-  };
+  };
 
 
 
@@ -6325,43 +6254,43 @@ function AdminPanel() {
 
 
 
-  const createAndAssignChallenges = async () => {
+  const createAndAssignChallenges = async () => {
 
 
 
-    if (!qualificationConfirmed || qualifiedTeams.length === 0) {
+    if (!qualificationConfirmed || qualifiedTeams.length === 0) {
 
 
 
-      alert("First confirm Round 2 qualification.");
+      alert("First confirm Round 2 qualification.");
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
-    const challenges = challengeText.split("\n").map(x => x.trim()).filter(Boolean);
+    const challenges = challengeText.split("\n").map(x => x.trim()).filter(Boolean);
 
 
 
-    if (challenges.length < qualifiedTeams.length) {
+    if (challenges.length < qualifiedTeams.length) {
 
 
 
-      alert(`At least ${qualifiedTeams.length} different challenges required.`);
+      alert(`At least ${qualifiedTeams.length} different challenges required.`);
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -6369,11 +6298,11 @@ function AdminPanel() {
 
 
 
-    setLoading(true);
+    setLoading(true);
 
 
 
-    await supabase.from("round2_assignments").delete().in("team_id", qualifiedTeams.map(t => t.id));
+    await supabase.from("round2_assignments").delete().in("team_id", qualifiedTeams.map(t => t.id));
 
 
 
@@ -6381,35 +6310,35 @@ function AdminPanel() {
 
 
 
-    const { data: created, error: challengeError } = await supabase
+    const { data: created, error: challengeError } = await supabase
 
 
 
-      .from("round2_challenges")
+      .from("round2_challenges")
 
 
 
-      .insert(challenges.slice(0, qualifiedTeams.length).map((title, i) => ({
+      .insert(challenges.slice(0, qualifiedTeams.length).map((title, i) => ({
 
 
 
-        challenge_title: title,
+        challenge_title: title,
 
 
 
-        challenge_description: `Create a professional, responsive website UI for: ${title}. Focus on visual hierarchy, creativity, usability, spacing, typography, and responsive layout.`,
+        challenge_description: `Create a professional, responsive website UI for: ${title}. Focus on visual hierarchy, creativity, usability, spacing, typography, and responsive layout.`,
 
 
 
-      })))
+      })))
 
 
 
-      .select();
+      .select();
 
 
 
-    if (challengeError) { setLoading(false); alert(challengeError.message); return; }
+    if (challengeError) { setLoading(false); alert(challengeError.message); return; }
 
 
 
@@ -6417,19 +6346,19 @@ function AdminPanel() {
 
 
 
-    const rows = qualifiedTeams.map((t, i) => ({ team_id: t.id, challenge_id: created[i].id }));
+    const rows = qualifiedTeams.map((t, i) => ({ team_id: t.id, challenge_id: created[i].id }));
 
 
 
-    const { error: assignmentError } = await supabase.from("round2_assignments").insert(rows);
+    const { error: assignmentError } = await supabase.from("round2_assignments").insert(rows);
 
 
 
-    setLoading(false);
+    setLoading(false);
 
 
 
-    if (assignmentError) { alert(assignmentError.message); return; }
+    if (assignmentError) { alert(assignmentError.message); return; }
 
 
 
@@ -6437,15 +6366,15 @@ function AdminPanel() {
 
 
 
-    await loadQualificationData();
+    await loadQualificationData();
 
 
 
-    alert("Unique Round 2 challenges assigned to every qualified team!");
+    alert("Unique Round 2 challenges assigned to every qualified team!");
 
 
 
-  };
+  };
 
 
 
@@ -6453,7 +6382,7 @@ function AdminPanel() {
 
 
 
-  
+  
   const updateJudgingField = (teamId, field, value) => {
     // Keep the raw text while typing so React never replaces the input with an
     // empty/parsed value on each keystroke. Validation happens when saving.
@@ -6510,11 +6439,11 @@ function AdminPanel() {
 
 
 
-     LIVE TEAM UPDATES
+     LIVE TEAM UPDATES
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -6522,11 +6451,11 @@ function AdminPanel() {
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    if (!loggedIn) return;
+    if (!loggedIn) return;
 
 
 
@@ -6534,7 +6463,7 @@ function AdminPanel() {
 
 
 
-    loadData();
+    loadData();
 
 
 
@@ -6542,71 +6471,71 @@ function AdminPanel() {
 
 
 
-    const teamChannel =
+    const teamChannel =
 
 
 
-      supabase
+      supabase
 
 
 
-        .channel(
+        .channel(
 
 
 
-          "admin-teams-live"
+          "admin-teams-live"
 
 
 
-        )
+        )
 
 
 
-        .on(
+        .on(
 
 
 
-          "postgres_changes",
+          "postgres_changes",
 
 
 
-          {
+          {
 
 
 
-            event: "*",
+            event: "*",
 
 
 
-            schema: "public",
+            schema: "public",
 
 
 
-            table: "teams",
+            table: "teams",
 
 
 
-          },
+          },
 
 
 
-          () => {
+          () => {
 
 
 
-            loadData();
+            loadData();
 
 
 
-          }
+          }
 
 
 
-        )
+        )
 
 
 
-        .subscribe();
+        .subscribe();
 
 
 
@@ -6614,15 +6543,15 @@ function AdminPanel() {
 
 
 
-    /*
+    /*
 
 
 
-      Backup team sync
+      Backup team sync
 
 
 
-    */
+    */
 
 
 
@@ -6630,23 +6559,23 @@ function AdminPanel() {
 
 
 
-    const interval =
+    const interval =
 
 
 
-      setInterval(
+      setInterval(
 
 
 
-        loadData,
+        loadData,
 
 
 
-        3000
+        3000
 
 
 
-      );
+      );
 
 
 
@@ -6654,19 +6583,19 @@ function AdminPanel() {
 
 
 
-    return () => {
+    return () => {
 
 
 
-      clearInterval(
+      clearInterval(
 
 
 
-        interval
+        interval
 
 
 
-      );
+      );
 
 
 
@@ -6674,35 +6603,35 @@ function AdminPanel() {
 
 
 
-      supabase.removeChannel(
+      supabase.removeChannel(
 
 
 
-        teamChannel
+        teamChannel
 
 
 
-      );
+      );
 
 
 
-    };
+    };
 
 
 
-  }, [
+  }, [
 
 
 
-    loggedIn,
+    loggedIn,
 
 
 
-    loadData,
+    loadData,
 
 
 
-  ]);
+  ]);
 
 
 
@@ -6710,15 +6639,15 @@ function AdminPanel() {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     DELETE TEAM
+     DELETE TEAM
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -6726,35 +6655,35 @@ function AdminPanel() {
 
 
 
-  const deleteTeam = async (
+  const deleteTeam = async (
 
 
 
-    teamId,
+    teamId,
 
 
 
-    teamName
+    teamName
 
 
 
-  ) => {
+  ) => {
 
 
 
-    const confirmed =
+    const confirmed =
 
 
 
-      window.confirm(
+      window.confirm(
 
 
 
-        `Delete "${teamName}"?\n\nThis team will be removed from the registered teams list.`
+        `Delete "${teamName}"?\n\nThis team will be removed from the registered teams list.`
 
 
 
-      );
+      );
 
 
 
@@ -6762,7 +6691,7 @@ function AdminPanel() {
 
 
 
-    if (!confirmed) return;
+    if (!confirmed) return;
 
 
 
@@ -6770,23 +6699,23 @@ function AdminPanel() {
 
 
 
-    const { error } =
+    const { error } =
 
 
 
-      await supabase
+      await supabase
 
 
 
-        .from("teams")
+        .from("teams")
 
 
 
-        .delete()
+        .delete()
 
 
 
-        .eq("id", teamId);
+        .eq("id", teamId);
 
 
 
@@ -6794,11 +6723,11 @@ function AdminPanel() {
 
 
 
-    if (error) {
+    if (error) {
 
 
 
-      console.error(error);
+      console.error(error);
 
 
 
@@ -6806,7 +6735,7 @@ function AdminPanel() {
 
 
 
-      alert(error.message);
+      alert(error.message);
 
 
 
@@ -6814,11 +6743,11 @@ function AdminPanel() {
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -6826,31 +6755,31 @@ function AdminPanel() {
 
 
 
-    setTeams(
+    setTeams(
 
 
 
-      (currentTeams) =>
+      (currentTeams) =>
 
 
 
-        currentTeams.filter(
+        currentTeams.filter(
 
 
 
-          (item) =>
+          (item) =>
 
 
 
-            item.id !== teamId
+            item.id !== teamId
 
 
 
-        )
+        )
 
 
 
-    );
+    );
 
 
 
@@ -6858,19 +6787,19 @@ function AdminPanel() {
 
 
 
-    alert(
+    alert(
 
 
 
-      `${teamName} deleted successfully.`
+      `${teamName} deleted successfully.`
 
 
 
-    );
+    );
 
 
 
-  };
+  };
 
 
 
@@ -6878,15 +6807,15 @@ function AdminPanel() {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     UPDATE EVENT STATUS
+     UPDATE EVENT STATUS
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -6894,47 +6823,47 @@ function AdminPanel() {
 
 
 
-  const updateStatus = async (
+  const updateStatus = async (
 
 
 
-    newStatus
+    newStatus
 
 
 
-  ) => {
+  ) => {
 
 
 
-    if (newStatus === "ROUND_2") {
+    if (newStatus === "ROUND_2") {
 
 
 
-      const { data: q } = await supabase.from("round_qualifications").select("team_id").eq("round", 2).eq("qualified", true);
+      const { data: q } = await supabase.from("round_qualifications").select("team_id").eq("round", 2).eq("qualified", true);
 
 
 
-      const { data: a } = await supabase.from("round2_assignments").select("team_id");
+      const { data: a } = await supabase.from("round2_assignments").select("team_id");
 
 
 
-      if (!q?.length) { alert("First confirm Top N qualification."); return; }
+      if (!q?.length) { alert("First confirm Top N qualification."); return; }
 
 
 
-      const assignedIds = new Set((a || []).map(x => x.team_id));
+      const assignedIds = new Set((a || []).map(x => x.team_id));
 
 
 
-      const missing = q.filter(x => !assignedIds.has(x.team_id));
+      const missing = q.filter(x => !assignedIds.has(x.team_id));
 
 
 
-      if (missing.length) { alert("Every qualified team must have a unique challenge before Round 2 starts."); return; }
+      if (missing.length) { alert("Every qualified team must have a unique challenge before Round 2 starts."); return; }
 
 
 
-    }
+    }
 
 
 
@@ -6942,7 +6871,7 @@ function AdminPanel() {
 
 
 
-    setLoading(true);
+    setLoading(true);
 
 
 
@@ -6950,23 +6879,23 @@ function AdminPanel() {
 
 
 
-    const { error } =
+    const { error } =
 
 
 
-      await supabase
+      await supabase
 
 
 
-        .from("event_state")
+        .from("event_state")
 
 
 
-        .update({
+        .update({
 
 
 
-          status: newStatus,
+          status: newStatus,
 
 
 
@@ -6974,23 +6903,23 @@ function AdminPanel() {
 
 
 
-          round:
+          round:
 
 
 
-            newStatus ===
+            newStatus ===
 
 
 
-            "ROUND_2"
+            "ROUND_2"
 
 
 
-              ? 2
+              ? 2
 
 
 
-              : 1,
+              : 1,
 
 
 
@@ -6998,19 +6927,19 @@ function AdminPanel() {
 
 
 
-          updated_at:
+          updated_at:
 
 
 
-            new Date().toISOString(),
+            new Date().toISOString(),
 
 
 
-        })
+        })
 
 
 
-        .eq("id", 1);
+        .eq("id", 1);
 
 
 
@@ -7018,7 +6947,7 @@ function AdminPanel() {
 
 
 
-    setLoading(false);
+    setLoading(false);
 
 
 
@@ -7026,11 +6955,11 @@ function AdminPanel() {
 
 
 
-    if (error) {
+    if (error) {
 
 
 
-      console.error(error);
+      console.error(error);
 
 
 
@@ -7038,7 +6967,7 @@ function AdminPanel() {
 
 
 
-      alert(error.message);
+      alert(error.message);
 
 
 
@@ -7046,11 +6975,11 @@ function AdminPanel() {
 
 
 
-      return;
+      return;
 
 
 
-    }
+    }
 
 
 
@@ -7058,7 +6987,7 @@ function AdminPanel() {
 
 
 
-    setStatus(newStatus);
+    setStatus(newStatus);
 
 
 
@@ -7066,35 +6995,35 @@ function AdminPanel() {
 
 
 
-    if (newStatus === "ROUND_1") {
+    if (newStatus === "ROUND_1") {
 
 
 
-      alert("Round 1 started! 30 questions • 15 minutes.");
+      alert("Round 1 started! 30 questions • 15 minutes.");
 
 
 
-    } else if (newStatus === "ROUND_2") {
+    } else if (newStatus === "ROUND_2") {
 
 
 
-      alert("Round 2 started! Qualified teams now have 30 minutes.");
+      alert("Round 2 started! Qualified teams now have 30 minutes.");
 
 
 
-    } else {
+    } else {
 
 
 
-      alert("Event moved to waiting state.");
+      alert("Event moved to waiting state.");
 
 
 
-    }
+    }
 
 
 
-  };
+  };
 
 
 
@@ -7102,15 +7031,15 @@ function AdminPanel() {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     LOGIN
+     LOGIN
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -7118,15 +7047,15 @@ function AdminPanel() {
 
 
 
-  if (!loggedIn) {
+  if (!loggedIn) {
 
 
 
-    return (
+    return (
 
 
 
-      <main className="join-page">
+      <main className="join-page">
 
 
 
@@ -7134,7 +7063,7 @@ function AdminPanel() {
 
 
 
-        <div className="join-card">
+        <div className="join-card">
 
 
 
@@ -7142,15 +7071,15 @@ function AdminPanel() {
 
 
 
-          <div className="badge">
+          <div className="badge">
 
 
 
-            ADMIN ACCESS
+            ADMIN ACCESS
 
 
 
-          </div>
+          </div>
 
 
 
@@ -7158,15 +7087,15 @@ function AdminPanel() {
 
 
 
-          <h2>
+          <h2>
 
 
 
-            Admin Login
+            Admin Login
 
 
 
-          </h2>
+          </h2>
 
 
 
@@ -7174,19 +7103,19 @@ function AdminPanel() {
 
 
 
-          <p>
+          <p>
 
 
 
-            Enter the event
+            Enter the event
 
 
 
-            administrator PIN.
+            administrator PIN.
 
 
 
-          </p>
+          </p>
 
 
 
@@ -7194,75 +7123,75 @@ function AdminPanel() {
 
 
 
-          <input
+          <input
 
 
 
-            type="password"
+            type="password"
 
 
 
-            placeholder="Admin PIN"
+            placeholder="Admin PIN"
 
 
 
-            value={pin}
+            value={pin}
 
 
 
-            onChange={(e) =>
+            onChange={(e) =>
 
 
 
-              setPin(
+              setPin(
 
 
 
-                e.target.value
+                e.target.value
 
 
 
-              )
+              )
 
 
 
-            }
+            }
 
 
 
-            onKeyDown={(e) => {
+            onKeyDown={(e) => {
 
 
 
-              if (
+              if (
 
 
 
-                e.key ===
+                e.key ===
 
 
 
-                "Enter"
+                "Enter"
 
 
 
-              ) {
+              ) {
 
 
 
-                login();
+                login();
 
 
 
-              }
+              }
 
 
 
-            }}
+            }}
 
 
 
-          />
+          />
 
 
 
@@ -7270,27 +7199,27 @@ function AdminPanel() {
 
 
 
-          <button
+          <button
 
 
 
-            className="primary-btn full"
+            className="primary-btn full"
 
 
 
-            onClick={login}
+            onClick={login}
 
 
 
-          >
+          >
 
 
 
-            Unlock Admin →
+            Unlock Admin →
 
 
 
-          </button>
+          </button>
 
 
 
@@ -7298,7 +7227,7 @@ function AdminPanel() {
 
 
 
-        </div>
+        </div>
 
 
 
@@ -7306,15 +7235,15 @@ function AdminPanel() {
 
 
 
-      </main>
+      </main>
 
 
 
-    );
+    );
 
 
 
-  }
+  }
 
 
 
@@ -7322,15 +7251,15 @@ function AdminPanel() {
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     DASHBOARD
+     DASHBOARD
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -7338,11 +7267,11 @@ function AdminPanel() {
 
 
 
-  return (
+  return (
 
 
 
-    <main className="admin-page">
+    <main className="admin-page">
 
 
 
@@ -7350,7 +7279,7 @@ function AdminPanel() {
 
 
 
-      <div className="admin-header">
+      <div className="admin-header">
 
 
 
@@ -7358,7 +7287,7 @@ function AdminPanel() {
 
 
 
-        <div>
+        <div>
 
 
 
@@ -7366,15 +7295,15 @@ function AdminPanel() {
 
 
 
-          <div className="badge">
+          <div className="badge">
 
 
 
-            ADMIN DASHBOARD
+            ADMIN DASHBOARD
 
 
 
-          </div>
+          </div>
 
 
 
@@ -7382,15 +7311,15 @@ function AdminPanel() {
 
 
 
-          <h2>
+          <h2>
 
 
 
-            Web Designing Quiz
+            Web Designing Quiz
 
 
 
-          </h2>
+          </h2>
 
 
 
@@ -7398,7 +7327,7 @@ function AdminPanel() {
 
 
 
-        </div>
+        </div>
 
 
 
@@ -7406,7 +7335,7 @@ function AdminPanel() {
 
 
 
-        <div className="admin-status">
+        <div className="admin-status">
 
 
 
@@ -7414,15 +7343,15 @@ function AdminPanel() {
 
 
 
-          <span>
+          <span>
 
 
 
-            EVENT STATUS
+            EVENT STATUS
 
 
 
-          </span>
+          </span>
 
 
 
@@ -7430,15 +7359,15 @@ function AdminPanel() {
 
 
 
-          <strong>
+          <strong>
 
 
 
-            {status}
+            {status}
 
 
 
-          </strong>
+          </strong>
 
 
 
@@ -7446,7 +7375,7 @@ function AdminPanel() {
 
 
 
-        </div>
+        </div>
 
 
 
@@ -7454,7 +7383,7 @@ function AdminPanel() {
 
 
 
-      </div>
+      </div>
 
 
 
@@ -7462,7 +7391,7 @@ function AdminPanel() {
 
 
 
-      <div className="admin-grid">
+      <div className="admin-grid">
 
 
 
@@ -7470,7 +7399,7 @@ function AdminPanel() {
 
 
 
-        {/* EVENT CONTROL */}
+        {/* EVENT CONTROL */}
 
 
 
@@ -7478,7 +7407,7 @@ function AdminPanel() {
 
 
 
-        <section className="admin-card">
+        <section className="admin-card">
 
 
 
@@ -7486,15 +7415,15 @@ function AdminPanel() {
 
 
 
-          <h3>
+          <h3>
 
 
 
-            Event Control
+            Event Control
 
 
 
-          </h3>
+          </h3>
 
 
 
@@ -7502,19 +7431,19 @@ function AdminPanel() {
 
 
 
-          <p>
+          <p>
 
 
 
-            Control when teams
+            Control when teams
 
 
 
-            can enter the quiz.
+            can enter the quiz.
 
 
 
-          </p>
+          </p>
 
 
 
@@ -7522,63 +7451,63 @@ function AdminPanel() {
 
 
 
-          <button
+          <button
 
 
 
-            className="primary-btn full"
+            className="primary-btn full"
 
 
 
-            onClick={() =>
+            onClick={() =>
 
 
 
-              updateStatus(
+              updateStatus(
 
 
 
-                "ROUND_1"
+                "ROUND_1"
 
 
 
-              )
+              )
 
 
 
-            }
+            }
 
 
 
-            disabled={
+            disabled={
 
 
 
-              loading ||
+              loading ||
 
 
 
-              status ===
+              status ===
 
 
 
-                "ROUND_1"
+                "ROUND_1"
 
 
 
-            }
+            }
 
 
 
-          >
+          >
 
 
 
-            ▶ Start Round 1
+            ▶ Start Round 1
 
 
 
-          </button>
+          </button>
 
 
 
@@ -7586,47 +7515,47 @@ function AdminPanel() {
 
 
 
-          <button
+          <button
 
 
 
-            className="secondary-btn full"
+            className="secondary-btn full"
 
 
 
-            onClick={() =>
+            onClick={() =>
 
 
 
-              updateStatus(
+              updateStatus(
 
 
 
-                "WAITING"
+                "WAITING"
 
 
 
-              )
+              )
 
 
 
-            }
+            }
 
 
 
-            disabled={loading}
+            disabled={loading}
 
 
 
-          >
+          >
 
 
 
-            ⏸ Stop / Reset
+            ⏸ Stop / Reset
 
 
 
-          </button>
+          </button>
 
 
 
@@ -7634,7 +7563,7 @@ function AdminPanel() {
 
 
 
-        </section>
+        </section>
 
 
 
@@ -7642,7 +7571,7 @@ function AdminPanel() {
 
 
 
-        {/* ROUND 2 CONTROL */}
+        {/* ROUND 2 CONTROL */}
 
 
 
@@ -7650,15 +7579,15 @@ function AdminPanel() {
 
 
 
-        <section className="admin-card">
+        <section className="admin-card">
 
 
 
-          <h3>Round 2 • UI Design Challenge</h3>
+          <h3>Round 2 • UI Design Challenge</h3>
 
 
 
-          <p>Finish Round 1, select Top N, then assign one different challenge to each qualified team.</p>
+          <p>Finish Round 1, select Top N, then assign one different challenge to each qualified team.</p>
 
 
 
@@ -7666,15 +7595,15 @@ function AdminPanel() {
 
 
 
-          <label>Top N Teams</label>
+          <label>Top N Teams</label>
 
 
 
-          <input type="number" min="1" value={topN} onChange={e => setTopN(e.target.value)} />
+          <input type="number" min="1" value={topN} onChange={e => setTopN(e.target.value)} />
 
 
 
-          <button className="secondary-btn full" onClick={confirmQualification} disabled={loading || status === "ROUND_2"}>✓ Confirm Qualification</button>
+          <button className="secondary-btn full" onClick={confirmQualification} disabled={loading || status === "ROUND_2"}>✓ Confirm Qualification</button>
 
 
 
@@ -7682,23 +7611,23 @@ function AdminPanel() {
 
 
 
-          {qualifiedTeams.length > 0 && (
+          {qualifiedTeams.length > 0 && (
 
 
 
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 16 }}>
 
 
 
-              <strong>Qualified Teams</strong>
+              <strong>Qualified Teams</strong>
 
 
 
-              {qualifiedTeams.map(t => (
+              {qualifiedTeams.map(t => (
 
 
 
-                <div key={t.id} className="team-row">
+                <div key={t.id} className="team-row">
 
                   <div className="team-info">
 
@@ -7714,31 +7643,15 @@ function AdminPanel() {
 
 
 
-              ))}
+              ))}
 
 
 
-            </div>
+            </div>
 
 
 
-          )}
-
-
-
-
-
-
-
-          <label style={{ marginTop: 16, display: "block" }}>Unique Challenges (one per line)</label>
-
-
-
-          <textarea rows="8" value={challengeText} onChange={e => setChallengeText(e.target.value)} style={{ width: "100%", boxSizing: "border-box", marginTop: 8 }} />
-
-
-
-          <button className="secondary-btn full" onClick={createAndAssignChallenges} disabled={loading || !qualificationConfirmed}>🎯 Assign Unique Challenges</button>
+          )}
 
 
 
@@ -7746,47 +7659,15 @@ function AdminPanel() {
 
 
 
-          {assignments.length > 0 && (
+          <label style={{ marginTop: 16, display: "block" }}>Unique Challenges (one per line)</label>
 
 
 
-            <div style={{ marginTop: 14 }}>
+          <textarea rows="8" value={challengeText} onChange={e => setChallengeText(e.target.value)} style={{ width: "100%", boxSizing: "border-box", marginTop: 8 }} />
 
 
 
-              <strong>Assignments</strong>
-
-
-
-              {assignments.map(a => (
-
-
-
-                <div key={a.team_id} style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.08)", fontSize: 13 }}>
-
-
-
-                  <b>{teams.find(t => t.id === a.team_id)?.name || "Team"}</b><br />
-
-
-
-                  <span style={{ opacity: .75 }}>{a.round2_challenges?.challenge_title}</span>
-
-
-
-                </div>
-
-
-
-              ))}
-
-
-
-            </div>
-
-
-
-          )}
+          <button className="secondary-btn full" onClick={createAndAssignChallenges} disabled={loading || !qualificationConfirmed}>🎯 Assign Unique Challenges</button>
 
 
 
@@ -7794,7 +7675,55 @@ function AdminPanel() {
 
 
 
-          <button className="primary-btn full" style={{ marginTop: 16 }} onClick={() => updateStatus("ROUND_2")} disabled={loading || status === "ROUND_2" || !qualificationConfirmed || assignments.length < qualifiedTeams.length}>▶ Start Round 2 • 30:00</button>
+          {assignments.length > 0 && (
+
+
+
+            <div style={{ marginTop: 14 }}>
+
+
+
+              <strong>Assignments</strong>
+
+
+
+              {assignments.map(a => (
+
+
+
+                <div key={a.team_id} style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,.08)", fontSize: 13 }}>
+
+
+
+                  <b>{teams.find(t => t.id === a.team_id)?.name || "Team"}</b><br />
+
+
+
+                  <span style={{ opacity: .75 }}>{a.round2_challenges?.challenge_title}</span>
+
+
+
+                </div>
+
+
+
+              ))}
+
+
+
+            </div>
+
+
+
+          )}
+
+
+
+
+
+
+
+          <button className="primary-btn full" style={{ marginTop: 16 }} onClick={() => updateStatus("ROUND_2")} disabled={loading || status === "ROUND_2" || !qualificationConfirmed || assignments.length < qualifiedTeams.length}>▶ Start Round 2 • 30:00</button>
 
           <button
             className="secondary-btn full"
@@ -7806,7 +7735,7 @@ function AdminPanel() {
 
 
 
-        </section>
+        </section>
 
 
 
@@ -7814,7 +7743,7 @@ function AdminPanel() {
 
 
 
-        
+        
         {/* ROUND 2 JUDGING */}
         <section className="admin-card round2-judging-card">
           <h3>Round 2 • Judging & Results</h3>
@@ -7907,7 +7836,7 @@ function AdminPanel() {
 
 
 
-        <section className="admin-card">
+        <section className="admin-card">
 
 
 
@@ -7915,7 +7844,7 @@ function AdminPanel() {
 
 
 
-          <div className="section-title">
+          <div className="section-title">
 
 
 
@@ -7923,15 +7852,15 @@ function AdminPanel() {
 
 
 
-            <h3>
+            <h3>
 
 
 
-              Registered Teams
+              Registered Teams
 
 
 
-            </h3>
+            </h3>
 
 
 
@@ -7939,15 +7868,15 @@ function AdminPanel() {
 
 
 
-            <span className="team-count">
+            <span className="team-count">
 
 
 
-              {teams.length}
+              {teams.length}
 
 
 
-            </span>
+            </span>
 
 
 
@@ -7955,7 +7884,7 @@ function AdminPanel() {
 
 
 
-          </div>
+          </div>
 
 
 
@@ -7963,27 +7892,27 @@ function AdminPanel() {
 
 
 
-          {teams.length === 0 && (
+          {teams.length === 0 && (
 
 
 
-            <p>
+            <p>
 
 
 
-              No teams registered
+              No teams registered
 
 
 
-              yet.
+              yet.
 
 
 
-            </p>
+            </p>
 
 
 
-          )}
+          )}
 
 
 
@@ -7991,27 +7920,27 @@ function AdminPanel() {
 
 
 
-          {teams.map(
+          {teams.map(
 
 
 
-            (item) => (
+            (item) => (
 
 
 
-              <div
+              <div
 
 
 
-                className="team-row"
+                className="team-row"
 
 
 
-                key={item.id}
+                key={item.id}
 
 
 
-              >
+              >
 
 
 
@@ -8019,7 +7948,7 @@ function AdminPanel() {
 
 
 
-                <div className="team-info">
+                <div className="team-info">
 
 
 
@@ -8027,15 +7956,15 @@ function AdminPanel() {
 
 
 
-                  <strong>
+                  <strong>
 
 
 
-                    {item.name}
+                    {item.name}
 
 
 
-                  </strong>
+                  </strong>
 
 
 
@@ -8043,19 +7972,19 @@ function AdminPanel() {
 
 
 
-                  <small>
+                  <small>
 
 
 
-                    {item.members ||
+                    {item.members ||
 
 
 
-                      "No members listed"}
+                      "No members listed"}
 
 
 
-                  </small>
+                  </small>
 
 
 
@@ -8063,7 +7992,7 @@ function AdminPanel() {
 
 
 
-                </div>
+                </div>
 
 
 
@@ -8071,7 +8000,7 @@ function AdminPanel() {
 
 
 
-                <div className="team-actions">
+                <div className="team-actions">
 
 
 
@@ -8079,15 +8008,15 @@ function AdminPanel() {
 
 
 
-                  <span className="team-check">
+                  <span className="team-check">
 
 
 
-                    ✓
+                    ✓
 
 
 
-                  </span>
+                  </span>
 
 
 
@@ -8095,47 +8024,47 @@ function AdminPanel() {
 
 
 
-                  <button
+                  <button
 
 
 
-                    className="delete-btn"
+                    className="delete-btn"
 
 
 
-                    onClick={() =>
+                    onClick={() =>
 
 
 
-                      deleteTeam(
+                      deleteTeam(
 
 
 
-                        item.id,
+                        item.id,
 
 
 
-                        item.name
+                        item.name
 
 
 
-                      )
+                      )
 
 
 
-                    }
+                    }
 
 
 
-                  >
+                  >
 
 
 
-                    Delete
+                    Delete
 
 
 
-                  </button>
+                  </button>
 
 
 
@@ -8143,7 +8072,7 @@ function AdminPanel() {
 
 
 
-                </div>
+                </div>
 
 
 
@@ -8151,15 +8080,15 @@ function AdminPanel() {
 
 
 
-              </div>
+              </div>
 
 
 
-            )
+            )
 
 
 
-          )}
+          )}
 
 
 
@@ -8167,7 +8096,7 @@ function AdminPanel() {
 
 
 
-          {/* LIVE LEADERBOARD */}
+          {/* LIVE LEADERBOARD */}
 
 
 
@@ -8175,15 +8104,15 @@ function AdminPanel() {
 
 
 
-          <AdminLiveLeaderboard
+          <AdminLiveLeaderboard
 
 
 
-            teams={teams}
+            teams={teams}
 
 
 
-          />
+          />
 
 
 
@@ -8191,7 +8120,7 @@ function AdminPanel() {
 
 
 
-        </section>
+        </section>
 
 
 
@@ -8199,15 +8128,15 @@ function AdminPanel() {
 
 
 
-      </div>
+      </div>
 
 
 
-    </main>
+    </main>
 
 
 
-  );
+  );
 
 
 
@@ -8223,7 +8152,7 @@ function AdminPanel() {
 
 
 
-   ADMIN LIVE LEADERBOARD
+   ADMIN LIVE LEADERBOARD
 
 
 
@@ -8239,7 +8168,7 @@ function AdminLiveLeaderboard({
 
 
 
-  teams,
+  teams,
 
 
 
@@ -8247,11 +8176,11 @@ function AdminLiveLeaderboard({
 
 
 
-  const [scores, setScores] =
+  const [scores, setScores] =
 
 
 
-    useState([]);
+    useState([]);
 
 
 
@@ -8259,39 +8188,39 @@ function AdminLiveLeaderboard({
 
 
 
-  const loadScores =
+  const loadScores =
 
 
 
-    useCallback(async () => {
+    useCallback(async () => {
 
 
 
-      const { data, error } =
+      const { data, error } =
 
 
 
-        await supabase
+        await supabase
 
 
 
-          .from("round_scores")
+          .from("round_scores")
 
 
 
-          .select(
+          .select(
 
 
 
-            "team_id, round, score, updated_at"
+            "team_id, round, score, updated_at"
 
 
 
-          )
+          )
 
 
 
-          .eq("round", 1);
+          .eq("round", 1);
 
 
 
@@ -8299,23 +8228,23 @@ function AdminLiveLeaderboard({
 
 
 
-      if (error) {
+      if (error) {
 
 
 
-        console.error(
+        console.error(
 
 
 
-          "Leaderboard error:",
+          "Leaderboard error:",
 
 
 
-          error
+          error
 
 
 
-        );
+        );
 
 
 
@@ -8323,11 +8252,11 @@ function AdminLiveLeaderboard({
 
 
 
-        return;
+        return;
 
 
 
-      }
+      }
 
 
 
@@ -8335,19 +8264,19 @@ function AdminLiveLeaderboard({
 
 
 
-      setScores(
+      setScores(
 
 
 
-        data || []
+        data || []
 
 
 
-      );
+      );
 
 
 
-    }, []);
+    }, []);
 
 
 
@@ -8355,15 +8284,15 @@ function AdminLiveLeaderboard({
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     LIVE SCORE SYSTEM
+     LIVE SCORE SYSTEM
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -8371,11 +8300,11 @@ function AdminLiveLeaderboard({
 
 
 
-  useEffect(() => {
+  useEffect(() => {
 
 
 
-    loadScores();
+    loadScores();
 
 
 
@@ -8383,15 +8312,15 @@ function AdminLiveLeaderboard({
 
 
 
-    /*
+    /*
 
 
 
-      SUPABASE REALTIME
+      SUPABASE REALTIME
 
 
 
-    */
+    */
 
 
 
@@ -8399,71 +8328,71 @@ function AdminLiveLeaderboard({
 
 
 
-    const channel =
+    const channel =
 
 
 
-      supabase
+      supabase
 
 
 
-        .channel(
+        .channel(
 
 
 
-          "admin-live-scores"
+          "admin-live-scores"
 
 
 
-        )
+        )
 
 
 
-        .on(
+        .on(
 
 
 
-          "postgres_changes",
+          "postgres_changes",
 
 
 
-          {
+          {
 
 
 
-            event: "*",
+            event: "*",
 
 
 
-            schema: "public",
+            schema: "public",
 
 
 
-            table: "round_scores",
+            table: "round_scores",
 
 
 
-          },
+          },
 
 
 
-          () => {
+          () => {
 
 
 
-            loadScores();
+            loadScores();
 
 
 
-          }
+          }
 
 
 
-        )
+        )
 
 
 
-        .subscribe();
+        .subscribe();
 
 
 
@@ -8471,23 +8400,23 @@ function AdminLiveLeaderboard({
 
 
 
-    /*
+    /*
 
 
 
-      1 SECOND FALLBACK
+      1 SECOND FALLBACK
 
 
 
-      Ensures automatic update even
+      Ensures automatic update even
 
 
 
-      if realtime notification is delayed.
+      if realtime notification is delayed.
 
 
 
-    */
+    */
 
 
 
@@ -8495,23 +8424,23 @@ function AdminLiveLeaderboard({
 
 
 
-    const interval =
+    const interval =
 
 
 
-      setInterval(
+      setInterval(
 
 
 
-        loadScores,
+        loadScores,
 
 
 
-        1000
+        1000
 
 
 
-      );
+      );
 
 
 
@@ -8519,19 +8448,19 @@ function AdminLiveLeaderboard({
 
 
 
-    return () => {
+    return () => {
 
 
 
-      clearInterval(
+      clearInterval(
 
 
 
-        interval
+        interval
 
 
 
-      );
+      );
 
 
 
@@ -8539,23 +8468,23 @@ function AdminLiveLeaderboard({
 
 
 
-      supabase.removeChannel(
+      supabase.removeChannel(
 
 
 
-        channel
+        channel
 
 
 
-      );
+      );
 
 
 
-    };
+    };
 
 
 
-  }, [loadScores]);
+  }, [loadScores]);
 
 
 
@@ -8563,15 +8492,15 @@ function AdminLiveLeaderboard({
 
 
 
-  /* =================================================
+  /* =================================================
 
 
 
-     BUILD LEADERBOARD
+     BUILD LEADERBOARD
 
 
 
-  ================================================= */
+  ================================================= */
 
 
 
@@ -8579,43 +8508,43 @@ function AdminLiveLeaderboard({
 
 
 
-  const leaderboard =
+  const leaderboard =
 
 
 
-    useMemo(() => {
+    useMemo(() => {
 
 
 
-      const rows =
+      const rows =
 
 
 
-        teams.map((team) => {
+        teams.map((team) => {
 
 
 
-          const scoreRow =
+          const scoreRow =
 
 
 
-            scores.find(
+            scores.find(
 
 
 
-              (score) =>
+              (score) =>
 
 
 
-                score.team_id ===
+                score.team_id ===
 
 
 
-                team.id
+                team.id
 
 
 
-            );
+            );
 
 
 
@@ -8623,27 +8552,27 @@ function AdminLiveLeaderboard({
 
 
 
-          return {
+          return {
 
 
 
-            id: team.id,
+            id: team.id,
 
 
 
-            name: team.name,
+            name: team.name,
 
 
 
-            score:
+            score:
 
 
 
-              scoreRow?.score ||
+              scoreRow?.score ||
 
 
 
-              0,
+              0,
 
 
 
@@ -8651,23 +8580,23 @@ function AdminLiveLeaderboard({
 
 
 
-            updated_at:
+            updated_at:
 
 
 
-              scoreRow?.updated_at ||
+              scoreRow?.updated_at ||
 
 
 
-              null,
+              null,
 
 
 
-          };
+          };
 
 
 
-        });
+        });
 
 
 
@@ -8675,23 +8604,23 @@ function AdminLiveLeaderboard({
 
 
 
-      /*
+      /*
 
 
 
-        Sort:
+        Sort:
 
 
 
-        1. Highest score
+        1. Highest score
 
 
 
-        2. Team name as stable tie-break
+        2. Team name as stable tie-break
 
 
 
-      */
+      */
 
 
 
@@ -8699,47 +8628,47 @@ function AdminLiveLeaderboard({
 
 
 
-      rows.sort(
+      rows.sort(
 
 
 
-        (a, b) => {
+        (a, b) => {
 
 
 
-          if (
+          if (
 
 
 
-            b.score !==
+            b.score !==
 
 
 
-            a.score
+            a.score
 
 
 
-          ) {
+          ) {
 
 
 
-            return (
+            return (
 
 
 
-              b.score -
+              b.score -
 
 
 
-              a.score
+              a.score
 
 
 
-            );
+            );
 
 
 
-          }
+          }
 
 
 
@@ -8747,23 +8676,23 @@ function AdminLiveLeaderboard({
 
 
 
-          return a.name.localeCompare(
+          return a.name.localeCompare(
 
 
 
-            b.name
+            b.name
 
 
 
-          );
+          );
 
 
 
-        }
+        }
 
 
 
-      );
+      );
 
 
 
@@ -8771,23 +8700,23 @@ function AdminLiveLeaderboard({
 
 
 
-      return rows;
+      return rows;
 
 
 
-    }, [
+    }, [
 
 
 
-      teams,
+      teams,
 
 
 
-      scores,
+      scores,
 
 
 
-    ]);
+    ]);
 
 
 
@@ -8795,11 +8724,11 @@ function AdminLiveLeaderboard({
 
 
 
-  return (
+  return (
 
 
 
-    <div className="live-leaderboard">
+    <div className="live-leaderboard">
 
 
 
@@ -8807,7 +8736,7 @@ function AdminLiveLeaderboard({
 
 
 
-      {/* TITLE */}
+      {/* TITLE */}
 
 
 
@@ -8815,15 +8744,15 @@ function AdminLiveLeaderboard({
 
 
 
-      <div className="leaderboard-title">
+      <div className="leaderboard-title">
 
 
 
-        🔴 LIVE LEADERBOARD
+        🔴 LIVE LEADERBOARD
 
 
 
-      </div>
+      </div>
 
 
 
@@ -8831,67 +8760,67 @@ function AdminLiveLeaderboard({
 
 
 
-      <div
+      <div
 
 
 
-        style={{
+        style={{
 
 
 
-          display: "flex",
+          display: "flex",
 
 
 
-          alignItems:
+          alignItems:
 
 
 
-            "center",
+            "center",
 
 
 
-          gap: "7px",
+          gap: "7px",
 
 
 
-          marginBottom:
+          marginBottom:
 
 
 
-            "14px",
+            "14px",
 
 
 
-          color:
+          color:
 
 
 
-            "#4ade80",
+            "#4ade80",
 
 
 
-          fontSize:
+          fontSize:
 
 
 
-            "11px",
+            "11px",
 
 
 
-          fontWeight:
+          fontWeight:
 
 
 
-            "800",
+            "800",
 
 
 
-        }}
+        }}
 
 
 
-      >
+      >
 
 
 
@@ -8899,59 +8828,59 @@ function AdminLiveLeaderboard({
 
 
 
-        <span
+        <span
 
 
 
-          style={{
+          style={{
 
 
 
-            width: "7px",
+            width: "7px",
 
 
 
-            height: "7px",
+            height: "7px",
 
 
 
-            borderRadius:
+            borderRadius:
 
 
 
-              "50%",
+              "50%",
 
 
 
-            background:
+            background:
 
 
 
-              "#4ade80",
+              "#4ade80",
 
 
 
-            display:
+            display:
 
 
 
-              "inline-block",
+              "inline-block",
 
 
 
-            boxShadow:
+            boxShadow:
 
 
 
-              "0 0 10px rgba(74,222,128,.7)",
+              "0 0 10px rgba(74,222,128,.7)",
 
 
 
-          }}
+          }}
 
 
 
-        />
+        />
 
 
 
@@ -8959,11 +8888,11 @@ function AdminLiveLeaderboard({
 
 
 
-        LIVE • AUTO
+        LIVE • AUTO
 
 
 
-        UPDATING
+        UPDATING
 
 
 
@@ -8971,7 +8900,7 @@ function AdminLiveLeaderboard({
 
 
 
-      </div>
+      </div>
 
 
 
@@ -8979,51 +8908,51 @@ function AdminLiveLeaderboard({
 
 
 
-      {leaderboard.length ===
+      {leaderboard.length ===
 
 
 
-      0 ? (
+      0 ? (
 
 
 
-        <p>
+        <p>
 
 
 
-          No teams yet.
+          No teams yet.
 
 
 
-        </p>
+        </p>
 
 
 
-      ) : (
+      ) : (
 
 
 
-        leaderboard.map(
+        leaderboard.map(
 
 
 
-          (team, index) => (
+          (team, index) => (
 
 
 
-            <div
+            <div
 
 
 
-              className="leaderboard-row"
+              className="leaderboard-row"
 
 
 
-              key={team.id}
+              key={team.id}
 
 
 
-            >
+            >
 
 
 
@@ -9031,7 +8960,7 @@ function AdminLiveLeaderboard({
 
 
 
-              {/* POSITION */}
+              {/* POSITION */}
 
 
 
@@ -9039,15 +8968,15 @@ function AdminLiveLeaderboard({
 
 
 
-              <div className="leaderboard-position">
+              <div className="leaderboard-position">
 
 
 
-                #{index + 1}
+                #{index + 1}
 
 
 
-              </div>
+              </div>
 
 
 
@@ -9055,7 +8984,7 @@ function AdminLiveLeaderboard({
 
 
 
-              {/* TEAM */}
+              {/* TEAM */}
 
 
 
@@ -9063,15 +8992,15 @@ function AdminLiveLeaderboard({
 
 
 
-              <div className="leaderboard-team">
+              <div className="leaderboard-team">
 
 
 
-                {team.name}
+                {team.name}
 
 
 
-              </div>
+              </div>
 
 
 
@@ -9079,7 +9008,7 @@ function AdminLiveLeaderboard({
 
 
 
-              {/* SCORE */}
+              {/* SCORE */}
 
 
 
@@ -9087,27 +9016,27 @@ function AdminLiveLeaderboard({
 
 
 
-              <div
+              <div
 
 
 
-                className="leaderboard-score"
+                className="leaderboard-score"
 
 
 
-                key={`${team.id}-${team.score}`}
+                key={`${team.id}-${team.score}`}
 
 
 
-              >
+              >
 
 
 
-                {team.score}
+                {team.score}
 
 
 
-              </div>
+              </div>
 
 
 
@@ -9115,7 +9044,7 @@ function AdminLiveLeaderboard({
 
 
 
-              {/* LIVE */}
+              {/* LIVE */}
 
 
 
@@ -9123,15 +9052,15 @@ function AdminLiveLeaderboard({
 
 
 
-              <div className="leaderboard-status">
+              <div className="leaderboard-status">
 
 
 
-                ● LIVE
+                ● LIVE
 
 
 
-              </div>
+              </div>
 
 
 
@@ -9139,19 +9068,19 @@ function AdminLiveLeaderboard({
 
 
 
-            </div>
+            </div>
 
 
 
-          )
+          )
 
 
 
-        )
+        )
 
 
 
-      )}
+      )}
 
 
 
@@ -9159,11 +9088,11 @@ function AdminLiveLeaderboard({
 
 
 
-    </div>
+    </div>
 
 
 
-  );
+  );
 
 
 
